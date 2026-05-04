@@ -2,7 +2,7 @@
 
 export {}
 
-declare module "vue" {
+declare module 'vue' {
   interface ComponentCustomProperties {
     $options?: Record<string, unknown>
   }

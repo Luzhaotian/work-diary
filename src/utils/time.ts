@@ -10,7 +10,7 @@ export function formatHours(clockIn: string, clockOut: string): string {
 
 export const LEAVE_TYPES = [
   { label: '全天', value: 'full' },
-  { label: '半天', value: 'half' }
+  { label: '半天', value: 'half' },
 ] as const
 
 export type LeaveType = 'full' | 'half'
