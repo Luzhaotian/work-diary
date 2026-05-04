@@ -1,0 +1,26 @@
+{
+  "name": "上班记",
+  "appid": "wx66ff7b8f552cf5ad",
+  "description": "打卡记录与工时统计小程序",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "autoclose": true
+    }
+  },
+  "mp-weixin": {
+    "appid": "wx66ff7b8f552cf5ad",
+    "setting": {
+      "urlCheck": false
+    },
+    "usingComponents": true
+  },
+  "uniStatistics": {
+    "enable": false
+  },
+  "vueVersion": "3"
+}
