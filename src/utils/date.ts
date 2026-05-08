@@ -7,8 +7,8 @@ export function formatDay(dateStr: string): string {
   return new Date(dateStr).getDate().toString()
 }
 
-export function formatWeekday(dateStr: string): string {
-  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(dateStr).getDay()]
+export function formatWeekday(d: string | Date): string {
+  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(d).getDay()]
 }
 
 export function prevMonth(year: number, month: number): { year: number; month: number } {
@@ -25,4 +25,8 @@ export function getLocalTimeStr(d: Date = new Date()): string {
     String(d.getMinutes()).padStart(2, '0'),
     String(d.getSeconds()).padStart(2, '0'),
   ].join(':')
+}
+
+export function formatFullDate(d: Date = new Date()): string {
+  return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日 ${formatWeekday(d)}`
 }

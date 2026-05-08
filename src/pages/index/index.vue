@@ -250,7 +250,7 @@
   .page {
     min-height: 100vh;
     background: $gray-50;
-    padding-bottom: 140rpx;
+    // padding-bottom: 140rpx;
   }
 
   .card {

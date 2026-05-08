@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
   import { ref, onMounted, onUnmounted } from 'vue'
-  import { getLocalTimeStr } from '@/utils/date'
+  import { getLocalTimeStr, formatFullDate } from '@/utils/date'
 
   const currentDate = ref('')
   const currentTime = ref('')
@@ -15,12 +15,7 @@
 
   function updateTime() {
     const n = new Date()
-    currentDate.value = n.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      weekday: 'long',
-    })
+    currentDate.value = formatFullDate(n)
     currentTime.value = getLocalTimeStr(n)
   }
 
