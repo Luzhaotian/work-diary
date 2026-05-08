@@ -5,7 +5,6 @@ export interface ClockRecord {
   clockOut?: string
   isLeave: boolean
   leaveType?: 'full' | 'half'
-  note?: string
 }
 
 export interface MonthlyStats {
@@ -16,9 +15,4 @@ export interface MonthlyStats {
   leaveDays: number
   totalHours: number
   averageHours: number
-}
-
-export interface Holiday {
-  date: string
-  name: string
 }

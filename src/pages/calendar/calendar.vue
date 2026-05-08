@@ -2,11 +2,11 @@
   <view class="page">
     <view class="header">
       <view class="month-nav">
-        <view class="nav-btn" @tap="prevMonth">
+        <view class="nav-btn" @tap="handlePrevMonth">
           <text class="nav-arrow">‹</text>
         </view>
         <text class="month-text">{{ year }}年{{ month }}月</text>
-        <view class="nav-btn" @tap="nextMonth">
+        <view class="nav-btn" @tap="handleNextMonth">
           <text class="nav-arrow">›</text>
         </view>
         <view class="today-btn" @tap="goToday">
@@ -30,7 +30,7 @@
             today: cell.isToday,
             weekend: cell.isWeekend,
             holiday: cell.isHoliday,
-            leave: cell.isLeave,
+            leave: showLeave && cell.isLeave,
             overtime: cell.isOvertime,
             recorded: cell.hasRecord && !cell.isLeave && !cell.isOvertime,
             selected: selectedDay && cell.day && cell.fullDate === selectedDay.fullDate,
@@ -40,7 +40,7 @@
           <text v-if="cell.day" class="day-num">{{ cell.day }}</text>
           <text v-if="cell.holidayName" class="day-tag holiday-tag">{{ cell.holidayName }}</text>
           <text v-else-if="cell.isOvertime" class="day-tag overtime-tag">加班</text>
-          <text v-else-if="cell.isLeave" class="day-tag leave-tag">
+          <text v-else-if="showLeave && cell.isLeave" class="day-tag leave-tag">
             {{ cell.leaveType === 'half' ? '半天' : '请假' }}
           </text>
           <text v-else-if="cell.clockIn" class="day-time">{{ cell.clockIn }}</text>
@@ -58,7 +58,7 @@
         <view class="legend-dot holiday-dot"></view>
         <text class="legend-text">节假日</text>
       </view>
-      <view class="legend-item">
+      <view class="legend-item" v-if="showLeave">
         <view class="legend-dot leave-dot"></view>
         <text class="legend-text">请假</text>
       </view>
@@ -108,12 +108,12 @@
           </picker>
         </view>
 
-        <view class="form-row">
+        <view class="form-row" v-if="showLeave">
           <text class="form-label">请假</text>
           <switch :checked="editIsLeave" color="#2563EB" @change="onLeaveChange" />
         </view>
 
-        <view class="form-row" v-if="editIsLeave">
+        <view class="form-row" v-if="showLeave && editIsLeave">
           <text class="form-label">类型</text>
           <picker :range="LEAVE_TYPES" :range-key="'label'" @change="onLeaveTypeChange">
             <view class="form-picker">
@@ -139,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, nextTick } from 'vue'
+  import { ref, computed, nextTick } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import type { ClockRecord } from '@/types/clock'
   import {
@@ -147,11 +147,29 @@
     addRecord,
     updateRecord,
     deleteRecord,
-    getRecords,
     generateId,
+    getShowLeave,
   } from '@/utils/storage'
   import { isWorkdayFromLib, isHolidayFromLib, getFestivalName } from '@/utils/workday'
-  import { formatHours, LEAVE_TYPES, type LeaveType } from '@/utils/time'
+  import { formatHours, LEAVE_TYPES } from '@/utils/time'
+  import {
+    getLocalDateStr,
+    prevMonth as getPrevMonth,
+    nextMonth as getNextMonth,
+  } from '@/utils/date'
+  import { useClockForm } from '@/composables/useClockForm'
+
+  const {
+    clockIn: editClockIn,
+    clockOut: editClockOut,
+    isLeave: editIsLeave,
+    leaveType: editLeaveType,
+    onClockInChange,
+    onClockOutChange,
+    onLeaveChange,
+    onLeaveTypeChange,
+    loadFromRecord,
+  } = useClockForm()
 
   const weekdays = ['一', '二', '三', '四', '五', '六', '日']
   const now = new Date()
@@ -159,12 +177,10 @@
   const month = ref(now.getMonth() + 1)
   const records = ref<ClockRecord[]>([])
   const selectedDay = ref<any>(null)
-  const editClockIn = ref('09:00')
-  const editClockOut = ref('18:00')
-  const editIsLeave = ref(false)
-  const editLeaveType = ref<LeaveType>('full')
+  const showLeave = ref(true)
 
   function loadRecords() {
+    showLeave.value = getShowLeave()
     records.value = getRecordsByMonth(year.value, month.value)
   }
 
@@ -190,7 +206,7 @@
     let startWeekday = firstDay.getDay()
     startWeekday = startWeekday === 0 ? 7 : startWeekday
     const daysInMonth = new Date(year.value, month.value, 0).getDate()
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = getLocalDateStr()
     const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
     const cells: CalendarCell[] = []
@@ -215,27 +231,25 @@
       const dateObj = new Date(year.value, month.value - 1, d)
       const dayOfWeek = dateObj.getDay()
       const isWkend = dayOfWeek === 0 || dayOfWeek === 6
+      const isWorkday = isWorkdayFromLib(dateStr)
       const isHol = isHolidayFromLib(dateStr)
       const hName = getFestivalName(dateStr)
       const record = records.value.find((r) => r.date === dateStr)
+      const isActualWeekend = isWkend && !isWorkday
 
       cells.push({
         day: d,
         fullDate: dateStr,
         weekday: weekdayNames[dayOfWeek],
         isToday: dateStr === todayStr,
-        isWeekend: isWkend && !isWorkdayFromLib(dateStr),
+        isWeekend: isActualWeekend,
         isHoliday: isHol,
         holidayName: hName,
         hasRecord: !!record,
         clockIn: record?.clockIn,
         clockOut: record?.clockOut,
         isLeave: record?.isLeave || false,
-        isOvertime:
-          (isHol || (isWkend && !isWorkdayFromLib(dateStr))) &&
-          !!record &&
-          !record.isLeave &&
-          !!record.clockIn,
+        isOvertime: (isHol || isActualWeekend) && !!record && !record.isLeave && !!record.clockIn,
         leaveType: record?.leaveType,
         recordId: record?.id,
       })
@@ -244,24 +258,18 @@
     return cells
   })
 
-  function prevMonth() {
-    if (month.value === 1) {
-      month.value = 12
-      year.value--
-    } else {
-      month.value--
-    }
+  function handlePrevMonth() {
+    const m = getPrevMonth(year.value, month.value)
+    year.value = m.year
+    month.value = m.month
     selectedDay.value = null
     loadRecords()
   }
 
-  function nextMonth() {
-    if (month.value === 12) {
-      month.value = 1
-      year.value++
-    } else {
-      month.value++
-    }
+  function handleNextMonth() {
+    const m = getNextMonth(year.value, month.value)
+    year.value = m.year
+    month.value = m.month
     selectedDay.value = null
     loadRecords()
   }
@@ -285,23 +293,12 @@
 
   function onDayTap(cell: CalendarCell) {
     selectedDay.value = cell
-    editClockIn.value = cell.clockIn || '09:00'
-    editClockOut.value = cell.clockOut || '18:00'
-    editIsLeave.value = cell.isLeave
-    editLeaveType.value = (cell.leaveType as 'full' | 'half') || 'full'
-  }
-
-  function onClockInChange(e: any) {
-    editClockIn.value = e.detail.value
-  }
-  function onClockOutChange(e: any) {
-    editClockOut.value = e.detail.value
-  }
-  function onLeaveChange(e: any) {
-    editIsLeave.value = e.detail.value
-  }
-  function onLeaveTypeChange(e: any) {
-    editLeaveType.value = LEAVE_TYPES[e.detail.value].value as LeaveType
+    loadFromRecord({
+      clockIn: cell.clockIn,
+      clockOut: cell.clockOut,
+      isLeave: cell.isLeave,
+      leaveType: cell.leaveType as 'full' | 'half' | undefined,
+    })
   }
 
   function saveRecord() {
@@ -348,11 +345,6 @@
       },
     })
   }
-
-  onMounted(() => {
-    loadRecords()
-    selectToday()
-  })
 
   onShow(() => {
     loadRecords()

@@ -1,11 +1,11 @@
 <template>
   <view class="page">
     <view class="month-bar">
-      <view class="month-btn" @tap="prevMonth">
+      <view class="month-btn" @tap="handlePrevMonth">
         <text class="month-arrow">‹</text>
       </view>
       <text class="month-title">{{ currentYear }}年{{ currentMonth }}月</text>
-      <view class="month-btn" @tap="nextMonth">
+      <view class="month-btn" @tap="handleNextMonth">
         <text class="month-arrow">›</text>
       </view>
     </view>
@@ -17,7 +17,7 @@
           <text class="record-week">{{ formatWeekday(record.date) }}</text>
         </view>
         <view class="record-center">
-          <view v-if="record.isLeave" class="leave-badge">
+          <view v-if="showLeave && record.isLeave" class="leave-badge">
             <text class="leave-text">{{ record.leaveType === 'half' ? '半天假' : '全天假' }}</text>
           </view>
           <view v-else class="record-times">
@@ -51,40 +51,42 @@
       </view>
     </scroll-view>
 
+    <view class="fab" @tap="goStats">
+      <text class="fab-icon">📊</text>
+    </view>
+
     <view class="modal-mask" v-if="showModal" @tap="showModal = false">
       <view class="modal-box" @tap.stop>
         <text class="modal-title">修改记录</text>
 
         <view class="form-row">
           <text class="form-label">上班时间</text>
-          <picker mode="time" :value="editForm.clockIn" @change="onEditClockIn">
+          <picker mode="time" :value="clockIn" @change="onClockInChange">
             <view class="form-picker">
-              <text class="form-picker-text">{{ editForm.clockIn || '请选择' }}</text>
+              <text class="form-picker-text">{{ clockIn || '请选择' }}</text>
             </view>
           </picker>
         </view>
 
         <view class="form-row">
           <text class="form-label">下班时间</text>
-          <picker mode="time" :value="editForm.clockOut" @change="onEditClockOut">
+          <picker mode="time" :value="clockOut" @change="onClockOutChange">
             <view class="form-picker">
-              <text class="form-picker-text">{{ editForm.clockOut || '请选择' }}</text>
+              <text class="form-picker-text">{{ clockOut || '请选择' }}</text>
             </view>
           </picker>
         </view>
 
-        <view class="form-row">
+        <view class="form-row" v-if="showLeave">
           <text class="form-label">请假</text>
-          <switch :checked="editForm.isLeave" color="#2563EB" @change="onLeaveChange" />
+          <switch :checked="isLeave" color="#2563EB" @change="onLeaveChange" />
         </view>
 
-        <view class="form-row" v-if="editForm.isLeave">
+        <view class="form-row" v-if="showLeave && isLeave">
           <text class="form-label">类型</text>
-          <picker :range="LEAVE_TYPES" :range-key="'label'" @change="onLeaveTypeChange">
+          <picker :range="leaveTypeOptions" :range-key="'label'" @change="onLeaveTypeChange">
             <view class="form-picker">
-              <text class="form-picker-text">{{
-                editForm.leaveType === 'half' ? '半天' : '全天'
-              }}</text>
+              <text class="form-picker-text">{{ leaveType === 'half' ? '半天' : '全天' }}</text>
             </view>
           </picker>
         </view>
@@ -99,54 +101,58 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
+  import { ref } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import type { ClockRecord } from '@/types/clock'
-  import { getRecordsByMonth, updateRecord, deleteRecord } from '@/utils/storage'
-  import { formatHours, LEAVE_TYPES, type LeaveType } from '@/utils/time'
+  import { getRecordsByMonth, updateRecord, deleteRecord, getShowLeave } from '@/utils/storage'
+  import { formatHours, LEAVE_TYPES } from '@/utils/time'
+  import { formatDay, formatWeekday, prevMonth, nextMonth } from '@/utils/date'
+  import { useClockForm } from '@/composables/useClockForm'
 
   const currentYear = ref(new Date().getFullYear())
   const currentMonth = ref(new Date().getMonth() + 1)
   const records = ref<ClockRecord[]>([])
   const showModal = ref(false)
-  const editForm = ref<ClockRecord>({ id: '', date: '', isLeave: false })
+  const showLeave = ref(true)
+  const editingRecordId = ref('')
+  const leaveTypeOptions = LEAVE_TYPES
+
+  const {
+    clockIn,
+    clockOut,
+    isLeave,
+    leaveType,
+    onClockInChange,
+    onClockOutChange,
+    onLeaveChange,
+    onLeaveTypeChange,
+    loadFromRecord,
+  } = useClockForm()
 
   function loadRecords() {
+    showLeave.value = getShowLeave()
     records.value = getRecordsByMonth(currentYear.value, currentMonth.value).sort((a, b) =>
       b.date.localeCompare(a.date),
     )
   }
 
-  function prevMonth() {
-    if (currentMonth.value === 1) {
-      currentMonth.value = 12
-      currentYear.value--
-    } else {
-      currentMonth.value--
-    }
+  function handlePrevMonth() {
+    const m = prevMonth(currentYear.value, currentMonth.value)
+    currentYear.value = m.year
+    currentMonth.value = m.month
     loadRecords()
   }
 
-  function nextMonth() {
-    if (currentMonth.value === 12) {
-      currentMonth.value = 1
-      currentYear.value++
-    } else {
-      currentMonth.value++
-    }
+  function handleNextMonth() {
+    const m = nextMonth(currentYear.value, currentMonth.value)
+    currentYear.value = m.year
+    currentMonth.value = m.month
     loadRecords()
-  }
-
-  function formatDay(d: string) {
-    return new Date(d).getDate().toString()
-  }
-
-  function formatWeekday(d: string) {
-    return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(d).getDay()]
   }
 
   function editRecord(r: ClockRecord) {
-    editForm.value = { ...r }
+    editingRecordId.value = r.id
+    loadFromRecord(r)
     showModal.value = true
   }
 
@@ -165,38 +171,31 @@
     })
   }
 
-  function onEditClockIn(e: any) {
-    editForm.value.clockIn = e.detail.value
-  }
-  function onEditClockOut(e: any) {
-    editForm.value.clockOut = e.detail.value
-  }
-  function onLeaveChange(e: any) {
-    editForm.value.isLeave = e.detail.value
-  }
-  function onLeaveTypeChange(e: any) {
-    editForm.value.leaveType = LEAVE_TYPES[e.detail.value].value as LeaveType
-  }
-
   function saveEdit() {
-    const form = editForm.value
-    if (form.isLeave) {
-      form.clockIn = undefined
-      form.clockOut = undefined
+    const rec: ClockRecord = {
+      id: editingRecordId.value,
+      date: '',
+      clockIn: isLeave.value ? undefined : clockIn.value,
+      clockOut: isLeave.value ? undefined : clockOut.value,
+      isLeave: isLeave.value,
+      leaveType: isLeave.value ? leaveType.value : undefined,
     }
-    updateRecord(form)
+    // preserve original date from existing record
+    const original = records.value.find((r) => r.id === editingRecordId.value)
+    if (original) rec.date = original.date
+    updateRecord(rec)
     showModal.value = false
     loadRecords()
     uni.showToast({ title: '已保存', icon: 'success' })
   }
 
-  onMounted(() => {
-    loadRecords()
-  })
-
   onShow(() => {
     loadRecords()
   })
+
+  function goStats() {
+    uni.navigateTo({ url: '/pages/stats/stats' })
+  }
 </script>
 
 <style lang="scss">
@@ -447,5 +446,24 @@
   .m-save {
     background: $blue;
     color: #fff;
+  }
+
+  .fab {
+    position: fixed;
+    bottom: 200rpx;
+    right: 40rpx;
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50%;
+    background: $blue;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8rpx 24rpx rgba(37, 99, 235, 0.4);
+    z-index: 100;
+  }
+
+  .fab-icon {
+    font-size: 40rpx;
   }
 </style>

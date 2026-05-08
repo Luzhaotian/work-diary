@@ -1,9 +1,6 @@
 <template>
   <view class="page">
-    <view class="hero">
-      <text class="hero-date">{{ currentDate }}</text>
-      <text class="hero-time">{{ currentTime }}</text>
-    </view>
+    <ClockDisplay />
 
     <view class="card today-card">
       <view class="card-header">
@@ -66,7 +63,7 @@
           {{ todayRecord?.clockOut ? '修改下班' : '记录下班' }}
         </button>
       </view>
-      <view class="leave-section">
+      <view class="leave-section" v-if="showLeave">
         <view class="leave-left">
           <text class="leave-label">请假</text>
           <picker
@@ -96,7 +93,7 @@
           <text class="stat-num">{{ monthlyStats.actualWorkDays }}</text>
           <text class="stat-desc">实际</text>
         </view>
-        <view class="stat-item">
+        <view class="stat-item" v-if="showLeave">
           <text class="stat-num">{{ monthlyStats.leaveDays }}</text>
           <text class="stat-desc">请假</text>
         </view>
@@ -110,28 +107,35 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted, computed } from 'vue'
+  import ClockDisplay from '@/components/ClockDisplay.vue'
+  import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import type { ClockRecord, MonthlyStats } from '@/types/clock'
   import {
     getTodayRecord,
     addRecord,
     updateRecord,
-    getRecordsByMonth,
     generateId,
+    getShowLeave,
   } from '@/utils/storage'
-  import { countWorkdaysInMonth } from '@/utils/workday'
-  import { calcHours, LEAVE_TYPES, type LeaveType } from '@/utils/time'
+  import { calcHours, LEAVE_TYPES } from '@/utils/time'
+  import { getLocalDateStr } from '@/utils/date'
+  import { calcMonthlyStats } from '@/utils/stats'
+  import { useClockForm } from '@/composables/useClockForm'
+
+  const {
+    clockIn: clockInTime,
+    clockOut: clockOutTime,
+    isLeave: isLeaveToday,
+    leaveType,
+    onClockInChange,
+    onClockOutChange,
+    onLeaveTypeChange,
+  } = useClockForm()
 
   const todayRecord = ref<ClockRecord | undefined>()
-  const currentDate = ref('')
-  const currentTime = ref('')
-  const clockInTime = ref('09:00')
-  const clockOutTime = ref('18:00')
-  const isLeaveToday = ref(false)
-  const leaveType = ref<LeaveType>('full')
+  const showLeave = ref(true)
   const now = new Date()
-  let timer: ReturnType<typeof setInterval> | null = null
   const monthlyStats = ref<MonthlyStats>({
     year: now.getFullYear(),
     month: now.getMonth() + 1,
@@ -141,21 +145,6 @@
     totalHours: 0,
     averageHours: 0,
   })
-
-  function updateTime() {
-    const n = new Date()
-    currentDate.value = n.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      weekday: 'long',
-    })
-    currentTime.value = [
-      String(n.getHours()).padStart(2, '0'),
-      String(n.getMinutes()).padStart(2, '0'),
-      String(n.getSeconds()).padStart(2, '0'),
-    ].join(':')
-  }
 
   const todayHours = computed(() => {
     if (todayRecord.value?.clockIn && todayRecord.value?.clockOut) {
@@ -167,45 +156,12 @@
   function loadMonthlyStats() {
     const y = now.getFullYear()
     const m = now.getMonth() + 1
-    const records = getRecordsByMonth(y, m)
-    const totalWorkDays = countWorkdaysInMonth(y, m)
-    let actualWorkDays = 0
-    let leaveDays = 0
-    let totalHours = 0
-
-    records.forEach((r) => {
-      if (r.isLeave) {
-        leaveDays += r.leaveType === 'half' ? 0.5 : 1
-      } else if (r.clockIn && r.clockOut) {
-        actualWorkDays++
-        totalHours += calcHours(r.clockIn, r.clockOut)
-      }
-    })
-
-    monthlyStats.value = {
-      year: y,
-      month: m,
-      totalWorkDays,
-      actualWorkDays,
-      leaveDays,
-      totalHours,
-      averageHours: actualWorkDays > 0 ? parseFloat((totalHours / actualWorkDays).toFixed(1)) : 0,
-    }
+    monthlyStats.value = calcMonthlyStats(y, m)
   }
 
-  function onClockInChange(e: any) {
-    clockInTime.value = e.detail.value
-  }
-  function onClockOutChange(e: any) {
-    clockOutTime.value = e.detail.value
-  }
-  function onLeaveTypeChange(e: any) {
-    leaveType.value = LEAVE_TYPES[e.detail.value].value as LeaveType
-  }
-
-  function toggleLeave(e: any) {
-    const today = new Date().toISOString().split('T')[0]
-    isLeaveToday.value = e.detail.value
+  function toggleLeave(e: { detail: { value: boolean } } | Event) {
+    const today = getLocalDateStr()
+    isLeaveToday.value = 'detail' in e ? (e.detail as { value: boolean }).value : false
 
     if (todayRecord.value) {
       todayRecord.value.isLeave = isLeaveToday.value
@@ -229,7 +185,7 @@
   }
 
   function recordClockIn() {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateStr()
     if (todayRecord.value) {
       todayRecord.value.clockIn = clockInTime.value
       updateRecord(todayRecord.value)
@@ -248,7 +204,7 @@
   }
 
   function recordClockOut() {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateStr()
     if (todayRecord.value) {
       todayRecord.value.clockOut = clockOutTime.value
       updateRecord(todayRecord.value)
@@ -267,6 +223,7 @@
   }
 
   function refreshData() {
+    showLeave.value = getShowLeave()
     todayRecord.value = getTodayRecord()
     if (todayRecord.value) {
       isLeaveToday.value = todayRecord.value.isLeave || false
@@ -282,18 +239,8 @@
     loadMonthlyStats()
   }
 
-  onMounted(() => {
-    refreshData()
-    updateTime()
-    timer = setInterval(updateTime, 1000)
-  })
-
   onShow(() => {
     refreshData()
-  })
-
-  onUnmounted(() => {
-    if (timer) clearInterval(timer)
   })
 </script>
 
@@ -304,27 +251,6 @@
     min-height: 100vh;
     background: $gray-50;
     padding-bottom: 140rpx;
-  }
-
-  .hero {
-    background: linear-gradient(135deg, $blue 0%, $blue-dark 100%);
-    padding: 48rpx 40rpx 56rpx;
-    color: #fff;
-    text-align: center;
-    border-radius: 0 0 40rpx 40rpx;
-  }
-
-  .hero-date {
-    font-size: 26rpx;
-    opacity: 0.85;
-    display: block;
-    margin-bottom: 8rpx;
-  }
-
-  .hero-time {
-    font-size: 64rpx;
-    font-weight: 700;
-    letter-spacing: 2rpx;
   }
 
   .card {

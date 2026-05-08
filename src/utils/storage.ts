@@ -1,4 +1,5 @@
 import type { ClockRecord } from '@/types/clock'
+import { getLocalDateStr } from '@/utils/date'
 
 const STORAGE_KEY = 'clock_records'
 
@@ -49,8 +50,8 @@ export function getRecordsByMonth(year: number, month: number): ClockRecord[] {
 export function cleanOldData(): void {
   const records = getRecords()
   const now = new Date()
-  const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1)
-  const cutoffDate = threeMonthsAgo.toISOString().split('T')[0]
+  const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), 1)
+  const cutoffDate = getLocalDateStr(tenYearsAgo)
 
   const filtered = records.filter((r) => r.date >= cutoffDate)
   saveRecords(filtered)
@@ -58,10 +59,21 @@ export function cleanOldData(): void {
 
 export function getTodayRecord(): ClockRecord | undefined {
   const records = getRecords()
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateStr()
   return records.find((r) => r.date === today)
 }
 
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2)
+}
+
+const SHOW_LEAVE_KEY = 'show_leave_button'
+
+export function getShowLeave(): boolean {
+  const val = uni.getStorageSync(SHOW_LEAVE_KEY)
+  return val === '' ? true : !!val
+}
+
+export function setShowLeave(show: boolean): void {
+  uni.setStorageSync(SHOW_LEAVE_KEY, show)
 }
