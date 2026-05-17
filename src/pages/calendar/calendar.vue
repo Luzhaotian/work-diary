@@ -156,6 +156,7 @@
     getLocalDateStr,
     prevMonth as getPrevMonth,
     nextMonth as getNextMonth,
+    formatWeekday,
   } from '@/utils/date'
   import { useClockForm } from '@/composables/useClockForm'
 
@@ -207,7 +208,6 @@
     startWeekday = startWeekday === 0 ? 7 : startWeekday
     const daysInMonth = new Date(year.value, month.value, 0).getDate()
     const todayStr = getLocalDateStr()
-    const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
     const cells: CalendarCell[] = []
 
@@ -240,7 +240,7 @@
       cells.push({
         day: d,
         fullDate: dateStr,
-        weekday: weekdayNames[dayOfWeek],
+        weekday: formatWeekday(dateObj, 'full'),
         isToday: dateStr === todayStr,
         isWeekend: isActualWeekend,
         isHoliday: isHol,

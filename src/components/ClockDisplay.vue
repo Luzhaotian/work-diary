@@ -15,7 +15,7 @@
 
   function updateTime() {
     const n = new Date()
-    currentDate.value = formatFullDate(n)
+    currentDate.value = formatFullDate(n, 'full')
     currentTime.value = getLocalTimeStr(n)
   }
 

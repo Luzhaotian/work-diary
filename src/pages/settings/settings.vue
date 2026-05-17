@@ -2,10 +2,16 @@
   <view class="page">
     <view class="group">
       <text class="group-title">通用</text>
-      <view class="cell" @tap="goLeave">
+      <view class="cell" @tap="goDetail('leave')">
         <text class="cell-label">按钮设置</text>
         <view class="cell-right">
           <text class="cell-value">{{ showLeaveText }}</text>
+          <text class="cell-arrow">›</text>
+        </view>
+      </view>
+      <view class="cell" @tap="goDetail('calendar')">
+        <text class="cell-label">日历设置</text>
+        <view class="cell-right">
           <text class="cell-arrow">›</text>
         </view>
       </view>
@@ -21,8 +27,8 @@
   const showLeave = ref(true)
   const showLeaveText = computed(() => (showLeave.value ? '已开启' : '已关闭'))
 
-  function goLeave() {
-    uni.navigateTo({ url: '/pages/settings/leave' })
+  function goDetail(type: string) {
+    uni.navigateTo({ url: `/pages/settings/detail?type=${type}` })
   }
 
   onShow(() => {

@@ -31,9 +31,9 @@
       }
     },
     {
-      "path": "pages/settings/leave",
+      "path": "pages/settings/detail",
       "style": {
-        "navigationBarTitleText": "请假设置"
+        "navigationBarTitleText": "设置详情"
       }
     }
   ],

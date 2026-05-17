@@ -197,7 +197,9 @@
   }
 
   const visibleMonthlyStats = computed(() => {
-    return monthlyStats.value.slice(0, detailPage.value * detailPageSize)
+    return monthlyStats.value
+      .slice(0, detailPage.value * detailPageSize)
+      .sort((a, b) => b.year - a.year || b.month - a.month)
   })
 
   const hasMoreMonths = computed(() => {
@@ -232,7 +234,11 @@
   }
 
   const summary = computed(() => {
-    let workDays = 0, actualDays = 0, leaveDays = 0, totalHours = 0, totalActual = 0
+    let workDays = 0,
+      actualDays = 0,
+      leaveDays = 0,
+      totalHours = 0,
+      totalActual = 0
     for (const s of monthlyStats.value) {
       workDays += s.totalWorkDays
       actualDays += s.actualWorkDays

@@ -1,13 +1,11 @@
 <template>
-  <view class="page">
-    <view class="group">
-      <text class="group-title">请假功能</text>
-      <view class="cell">
-        <text class="cell-label">展示请假按钮</text>
-        <switch :checked="showLeave" color="#2563EB" @change="onToggle" />
-      </view>
-      <text class="group-desc">关闭后，记录、历史、日历页面将隐藏请假相关操作</text>
+  <view class="group">
+    <text class="group-title">请假功能</text>
+    <view class="cell">
+      <text class="cell-label">展示请假按钮</text>
+      <switch :checked="showLeave" color="#2563EB" @change="onToggle" />
     </view>
+    <text class="group-desc">关闭后，记录、历史、日历页面将隐藏请假相关操作</text>
   </view>
 </template>
 
@@ -32,12 +30,6 @@
 
 <style lang="scss">
   @use '@/styles/variables.scss' as *;
-
-  .page {
-    min-height: 100vh;
-    background: $gray-50;
-    padding: 24rpx;
-  }
 
   .group {
     margin-bottom: 32rpx;
