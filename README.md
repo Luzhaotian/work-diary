@@ -5,11 +5,12 @@
 ## 功能特性
 
 - **打卡记录** - 记录每日上下班时间，支持手动修改
-- **请假管理** - 支持全天/半天请假标记
+- **请假管理** - 支持全天/半天请假标记，可配置是否展示请假按钮
 - **历史记录** - 查看历史打卡记录，支持按月筛选
 - **日历视图** - 以日历形式直观展示每日打卡状态
 - **工时统计** - 自动计算月度工时、出勤天数、平均工时等数据
 - **中国工作日** - 自动识别中国法定节假日和调休工作日
+- **个性设置** - 支持按钮设置、日历设置等个性化配置
 
 ## 技术栈
 
@@ -66,13 +67,27 @@ src/
 │   ├── index/       # 首页 - 打卡记录
 │   ├── record/      # 历史记录
 │   ├── calendar/    # 日历视图
-│   └── stats/       # 工时统计
+│   ├── stats/       # 工时统计
+│   └── settings/    # 设置
+│       ├── components/  # 设置子组件
+│       │   ├── LeaveSetting.vue    # 请假功能设置
+│       │   └── CalendarSetting.vue # 日历设置
+│       ├── detail.vue       # 设置详情页
+│       └── settings.vue     # 设置主页
+├── components/      # 公共组件
+│   └── ClockDisplay.vue   # 时钟显示组件
+├── composables/     # 组合式函数
+│   └── useClockForm.ts    # 打卡表单逻辑
 ├── types/           # TypeScript 类型定义
+│   └── clock.ts
 ├── utils/           # 工具函数
 │   ├── storage.ts   # 本地数据存储
 │   ├── time.ts      # 时间计算工具
+│   ├── date.ts      # 日期工具
+│   ├── stats.ts     # 统计计算工具
 │   └── workday.ts   # 工作日判断
 ├── styles/          # 全局样式
+│   └── variables.scss  # 样式变量
 └── static/          # 静态资源
 ```
 
