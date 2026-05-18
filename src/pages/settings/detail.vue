@@ -13,7 +13,7 @@
 
   const currentType = ref('')
 
-  onLoad((query: any) => {
+  onLoad((query?: Record<string, string>) => {
     currentType.value = query?.type || 'leave'
   })
 </script>

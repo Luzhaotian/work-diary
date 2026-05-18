@@ -2,6 +2,7 @@
   "name": "shangban-ji",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev:h5": "uni",
     "dev:mp-weixin": "uni -p mp-weixin",

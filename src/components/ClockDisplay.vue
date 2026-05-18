@@ -1,7 +1,11 @@
 <template>
   <view class="hero">
-    <text class="hero-date">{{ currentDate }}</text>
-    <text class="hero-time">{{ currentTime }}</text>
+    <text class="hero-date">
+      {{ currentDate }}
+    </text>
+    <text class="hero-time">
+      {{ currentTime }}
+    </text>
   </view>
 </template>
 

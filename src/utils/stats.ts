@@ -1,4 +1,4 @@
-import type { ClockRecord, MonthlyStats } from '@/types/clock'
+import type { MonthlyStats } from '@/types/clock'
 import { getRecordsByMonth } from '@/utils/storage'
 import { countWorkdaysInMonth } from '@/utils/workday'
 import { calcHours } from '@/utils/time'

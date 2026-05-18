@@ -1,20 +1,34 @@
 import js from "@eslint/js"
 import pluginVue from "eslint-plugin-vue"
-import tseslint from "@typescript-eslint/eslint-plugin"
+import vueParser from "vue-eslint-parser"
 import tsparser from "@typescript-eslint/parser"
+import tseslint from "@typescript-eslint/eslint-plugin"
 import prettier from "eslint-plugin-prettier"
+
+const commonGlobals = {
+  uni: "readonly",
+  wx: "readonly",
+  console: "readonly",
+  Event: "readonly",
+  setInterval: "readonly",
+  clearInterval: "readonly",
+  setTimeout: "readonly",
+  clearTimeout: "readonly",
+}
 
 export default [
   js.configs.recommended,
   ...pluginVue.configs["flat/recommended"],
   {
-    files: ["**/*.{ts,tsx,vue}"],
+    files: ["**/*.vue"],
     languageOptions: {
-      parser: tsparser,
+      parser: vueParser,
       parserOptions: {
+        parser: tsparser,
         ecmaVersion: "latest",
         sourceType: "module",
       },
+      globals: commonGlobals,
     },
     plugins: {
       "@typescript-eslint": tseslint,
@@ -34,14 +48,32 @@ export default [
           math: "always",
         },
       ],
+      "vue/singleline-html-element-content-newline": "off",
+      "vue/multiline-html-element-content-newline": "off",
+      "vue/html-closing-bracket-newline": "off",
+      "vue/first-attribute-linebreak": "off",
+      "vue/max-attributes-per-line": "off",
+      "vue/html-indent": "off",
     },
   },
   {
-    files: ["**/*.vue"],
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
+      parser: tsparser,
       parserOptions: {
-        parser: tsparser,
+        ecmaVersion: "latest",
+        sourceType: "module",
       },
+      globals: commonGlobals,
+    },
+    plugins: {
+      "@typescript-eslint": tseslint,
+      prettier,
+    },
+    rules: {
+      "prettier/prettier": "error",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   {

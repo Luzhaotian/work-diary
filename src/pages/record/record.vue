@@ -2,99 +2,114 @@
   <view class="page">
     <view class="month-bar">
       <view class="month-btn" @tap="handlePrevMonth">
-        <text class="month-arrow">‹</text>
+        <text class="month-arrow"> ‹ </text>
       </view>
-      <text class="month-title">{{ currentYear }}年{{ currentMonth }}月</text>
+      <text class="month-title"> {{ currentYear }}年{{ currentMonth }}月 </text>
       <view class="month-btn" @tap="handleNextMonth">
-        <text class="month-arrow">›</text>
+        <text class="month-arrow"> › </text>
       </view>
     </view>
 
     <scroll-view scroll-y class="list-wrap">
       <view v-for="record in records" :key="record.id" class="record-card">
         <view class="record-left">
-          <text class="record-day">{{ formatDay(record.date) }}</text>
-          <text class="record-week">{{ formatWeekday(record.date) }}</text>
+          <text class="record-day">
+            {{ formatDay(record.date) }}
+          </text>
+          <text class="record-week">
+            {{ formatWeekday(record.date) }}
+          </text>
         </view>
         <view class="record-center">
           <view v-if="showLeave && record.isLeave" class="leave-badge">
-            <text class="leave-text">{{ record.leaveType === 'half' ? '半天假' : '全天假' }}</text>
+            <text class="leave-text">
+              {{ record.leaveType === 'half' ? '半天假' : '全天假' }}
+            </text>
           </view>
           <view v-else class="record-times">
             <view class="record-time-item">
-              <text class="rt-label">上班</text>
-              <text class="rt-value">{{ record.clockIn || '--:--' }}</text>
+              <text class="rt-label"> 上班 </text>
+              <text class="rt-value">
+                {{ record.clockIn || '--:--' }}
+              </text>
             </view>
             <view class="record-time-item">
-              <text class="rt-label">下班</text>
-              <text class="rt-value">{{ record.clockOut || '--:--' }}</text>
+              <text class="rt-label"> 下班 </text>
+              <text class="rt-value">
+                {{ record.clockOut || '--:--' }}
+              </text>
             </view>
-            <view class="record-time-item" v-if="record.clockIn && record.clockOut">
-              <text class="rt-label">工时</text>
-              <text class="rt-value hl">{{ formatHours(record.clockIn, record.clockOut) }}h</text>
+            <view v-if="record.clockIn && record.clockOut" class="record-time-item">
+              <text class="rt-label"> 工时 </text>
+              <text class="rt-value hl"> {{ formatHours(record.clockIn, record.clockOut) }}h </text>
             </view>
           </view>
         </view>
         <view class="record-actions">
           <view class="action-btn edit-btn" @tap="editRecord(record)">
-            <text class="action-icon">✎</text>
+            <text class="action-icon"> ✎ </text>
           </view>
           <view class="action-btn del-btn" @tap="confirmDelete(record)">
-            <text class="action-icon">✕</text>
+            <text class="action-icon"> ✕ </text>
           </view>
         </view>
       </view>
 
       <view v-if="records.length === 0" class="empty-state">
-        <text class="empty-icon">📭</text>
-        <text class="empty-text">暂无记录</text>
+        <text class="empty-icon"> 📭 </text>
+        <text class="empty-text"> 暂无记录 </text>
       </view>
     </scroll-view>
 
     <view class="fab" @tap="goStats">
-      <text class="fab-icon">📊</text>
+      <text class="fab-icon"> 📊 </text>
     </view>
 
-    <view class="modal-mask" v-if="showModal" @tap="showModal = false">
-      <view class="modal-box" @tap.stop>
-        <text class="modal-title">修改记录</text>
+    <view v-if="showModal" class="modal-mask" @tap="showModal = false" />
+    <view v-if="showModal" class="modal-box">
+      <text class="modal-title"> 修改记录 </text>
 
-        <view class="form-row">
-          <text class="form-label">上班时间</text>
-          <picker mode="time" :value="clockIn" @change="onClockInChange">
-            <view class="form-picker">
-              <text class="form-picker-text">{{ clockIn || '请选择' }}</text>
-            </view>
-          </picker>
-        </view>
+      <view class="form-row">
+        <text class="form-label"> 上班时间 </text>
+        <picker mode="time" :value="clockIn" @change="onClockInChange">
+          <view class="form-picker">
+            <text class="form-picker-text">
+              {{ clockIn || '请选择' }}
+            </text>
+          </view>
+        </picker>
+      </view>
 
-        <view class="form-row">
-          <text class="form-label">下班时间</text>
-          <picker mode="time" :value="clockOut" @change="onClockOutChange">
-            <view class="form-picker">
-              <text class="form-picker-text">{{ clockOut || '请选择' }}</text>
-            </view>
-          </picker>
-        </view>
+      <view class="form-row">
+        <text class="form-label"> 下班时间 </text>
+        <picker mode="time" :value="clockOut" @change="onClockOutChange">
+          <view class="form-picker">
+            <text class="form-picker-text">
+              {{ clockOut || '请选择' }}
+            </text>
+          </view>
+        </picker>
+      </view>
 
-        <view class="form-row" v-if="showLeave">
-          <text class="form-label">请假</text>
-          <switch :checked="isLeave" color="#2563EB" @change="onLeaveChange" />
-        </view>
+      <view v-if="showLeave" class="form-row">
+        <text class="form-label"> 请假 </text>
+        <switch :checked="isLeave" color="#2563EB" @change="onLeaveChange" />
+      </view>
 
-        <view class="form-row" v-if="showLeave && isLeave">
-          <text class="form-label">类型</text>
-          <picker :range="leaveTypeOptions" :range-key="'label'" @change="onLeaveTypeChange">
-            <view class="form-picker">
-              <text class="form-picker-text">{{ leaveType === 'half' ? '半天' : '全天' }}</text>
-            </view>
-          </picker>
-        </view>
+      <view v-if="showLeave && isLeave" class="form-row">
+        <text class="form-label"> 类型 </text>
+        <picker :range="leaveTypeOptions" :range-key="'label'" @change="onLeaveTypeChange">
+          <view class="form-picker">
+            <text class="form-picker-text">
+              {{ leaveType === 'half' ? '半天' : '全天' }}
+            </text>
+          </view>
+        </picker>
+      </view>
 
-        <view class="modal-btns">
-          <button class="m-btn m-cancel" @tap="showModal = false">取消</button>
-          <button class="m-btn m-save" @tap="saveEdit">保存</button>
-        </view>
+      <view class="modal-btns">
+        <button class="m-btn m-cancel" @tap="showModal = false">取消</button>
+        <button class="m-btn m-save" @tap="saveEdit">保存</button>
       </view>
     </view>
   </view>
@@ -175,8 +190,8 @@
     const rec: ClockRecord = {
       id: editingRecordId.value,
       date: '',
-      clockIn: isLeave.value ? undefined : clockIn.value,
-      clockOut: isLeave.value ? undefined : clockOut.value,
+      clockIn: clockIn.value,
+      clockOut: clockOut.value,
       isLeave: isLeave.value,
       leaveType: isLeave.value ? leaveType.value : undefined,
     }
@@ -208,6 +223,9 @@
   }
 
   .month-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -239,7 +257,6 @@
   }
 
   .list-wrap {
-    height: calc(100vh - 260rpx);
     padding: 16rpx 24rpx;
     box-sizing: border-box;
   }
@@ -374,17 +391,19 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 999;
   }
 
   .modal-box {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background: #fff;
     border-radius: 24rpx;
     padding: 40rpx;
     width: 80%;
+    z-index: 1000;
   }
 
   .modal-title {

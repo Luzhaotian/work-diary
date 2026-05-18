@@ -1,8 +1,10 @@
 <template>
   <view class="page">
     <view class="header">
-      <text class="header-title">工时统计</text>
-      <text class="header-sub">{{ rangeLabel }}</text>
+      <text class="header-title"> 工时统计 </text>
+      <text class="header-sub">
+        {{ rangeLabel }}
+      </text>
     </view>
 
     <view class="filter-bar">
@@ -13,17 +15,19 @@
         :class="{ active: range === opt.value }"
         @tap="onRangeChange(opt.value)"
       >
-        <text class="filter-text">{{ opt.label }}</text>
+        <text class="filter-text">
+          {{ opt.label }}
+        </text>
       </view>
     </view>
 
     <!-- 柱状图：分页展示 -->
-    <view class="section" v-if="chartPages.length > 0">
+    <view v-if="chartPages.length > 0" class="section">
       <view class="section-head">
-        <text class="section-title">平均工时对比</text>
-        <text class="page-indicator" v-if="chartPages.length > 1"
-          >{{ chartPageIndex + 1 }}/{{ chartPages.length }}</text
-        >
+        <text class="section-title"> 平均工时对比 </text>
+        <text v-if="chartPages.length > 1" class="page-indicator">
+          {{ chartPageIndex + 1 }}/{{ chartPages.length }}
+        </text>
       </view>
       <swiper
         class="chart-swiper"
@@ -41,10 +45,12 @@
                   :style="{
                     height: Math.min((stat.averageHours / maxHours) * 100, 100) + '%',
                   }"
-                ></view>
+                />
               </view>
-              <text class="bar-val">{{ stat.averageHours }}h</text>
-              <text class="bar-label">{{ stat.label }}</text>
+              <text class="bar-val"> {{ stat.averageHours }}h </text>
+              <text class="bar-label">
+                {{ stat.label }}
+              </text>
             </view>
           </view>
         </swiper-item>
@@ -53,59 +59,75 @@
 
     <!-- 月度明细：分页加载 -->
     <view class="section">
-      <text class="section-title">月度明细</text>
+      <text class="section-title"> 月度明细 </text>
       <view
         v-for="stat in visibleMonthlyStats"
         :key="`${stat.year}-${stat.month}`"
         class="month-card"
       >
         <view class="month-head">
-          <text class="month-name">{{ stat.year }}年{{ stat.month }}月</text>
-          <text class="month-avg">均 {{ stat.averageHours }}h</text>
+          <text class="month-name"> {{ stat.year }}年{{ stat.month }}月 </text>
+          <text class="month-avg"> 均 {{ stat.averageHours }}h </text>
         </view>
         <view class="month-grid">
           <view class="mg-item">
-            <text class="mg-val">{{ stat.totalWorkDays }}</text>
-            <text class="mg-label">应出勤</text>
+            <text class="mg-val">
+              {{ stat.totalWorkDays }}
+            </text>
+            <text class="mg-label"> 应出勤 </text>
           </view>
           <view class="mg-item">
-            <text class="mg-val">{{ stat.actualWorkDays }}</text>
-            <text class="mg-label">实际</text>
+            <text class="mg-val">
+              {{ stat.actualWorkDays }}
+            </text>
+            <text class="mg-label"> 实际 </text>
           </view>
           <view class="mg-item">
-            <text class="mg-val">{{ stat.leaveDays }}</text>
-            <text class="mg-label">请假</text>
+            <text class="mg-val">
+              {{ stat.leaveDays }}
+            </text>
+            <text class="mg-label"> 请假 </text>
           </view>
           <view class="mg-item hl">
-            <text class="mg-val">{{ stat.averageHours }}</text>
-            <text class="mg-label">均工时</text>
+            <text class="mg-val">
+              {{ stat.averageHours }}
+            </text>
+            <text class="mg-label"> 均工时 </text>
           </view>
         </view>
       </view>
       <view v-if="hasMoreMonths" class="load-more" @tap="loadMoreMonths">
-        <text class="load-more-text">加载更多</text>
+        <text class="load-more-text"> 加载更多 </text>
       </view>
     </view>
 
     <!-- 汇总 -->
     <view class="section">
-      <text class="section-title">汇总</text>
+      <text class="section-title"> 汇总 </text>
       <view class="summary-grid">
         <view class="sum-item">
-          <text class="sum-val">{{ totalWorkDays }}</text>
-          <text class="sum-label">总应出勤</text>
+          <text class="sum-val">
+            {{ totalWorkDays }}
+          </text>
+          <text class="sum-label"> 总应出勤 </text>
         </view>
         <view class="sum-item">
-          <text class="sum-val">{{ totalActualDays }}</text>
-          <text class="sum-label">总实际出勤</text>
+          <text class="sum-val">
+            {{ totalActualDays }}
+          </text>
+          <text class="sum-label"> 总实际出勤 </text>
         </view>
         <view class="sum-item">
-          <text class="sum-val">{{ totalLeaveDays }}</text>
-          <text class="sum-label">总请假</text>
+          <text class="sum-val">
+            {{ totalLeaveDays }}
+          </text>
+          <text class="sum-label"> 总请假 </text>
         </view>
         <view class="sum-item hl">
-          <text class="sum-val">{{ overallAverageHours }}</text>
-          <text class="sum-label">整体均工时</text>
+          <text class="sum-val">
+            {{ overallAverageHours }}
+          </text>
+          <text class="sum-label"> 整体均工时 </text>
         </view>
       </view>
     </view>
@@ -168,17 +190,22 @@
         entry.totalDays += s.actualWorkDays
         yearMap.set(s.year, entry)
       }
-      return Array.from(yearMap.entries()).map(([year, v]) => ({
-        key: String(year),
-        label: `${year}`,
-        averageHours: v.totalDays > 0 ? parseFloat((v.totalHours / v.totalDays).toFixed(1)) : 0,
-      }))
+      return Array.from(yearMap.entries())
+        .sort((a, b) => b[0] - a[0])
+        .map(([year, v]) => ({
+          key: String(year),
+          label: `${year}`,
+          averageHours: v.totalDays > 0 ? parseFloat((v.totalHours / v.totalDays).toFixed(1)) : 0,
+        }))
     }
-    return monthlyStats.value.map((s) => ({
-      key: `${s.year}-${s.month}`,
-      label: `${s.month}月`,
-      averageHours: s.averageHours,
-    }))
+    return monthlyStats.value
+      .slice()
+      .sort((a, b) => b.year - a.year || b.month - a.month)
+      .map((s) => ({
+        key: `${s.year}-${s.month}`,
+        label: `${s.month}月`,
+        averageHours: s.averageHours,
+      }))
   })
 
   const CHART_PAGE_SIZE = 12
@@ -192,7 +219,7 @@
     return pages
   })
 
-  function onChartPageChange(e: any) {
+  function onChartPageChange(e: { detail: { current: number } }) {
     chartPageIndex.value = e.detail.current
   }
 
@@ -222,7 +249,6 @@
       y = prev.year
       m = prev.month
     }
-    stats.reverse()
     monthlyStats.value = stats
     detailPage.value = 1
     chartPageIndex.value = 0

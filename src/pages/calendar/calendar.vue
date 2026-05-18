@@ -3,21 +3,23 @@
     <view class="header">
       <view class="month-nav">
         <view class="nav-btn" @tap="handlePrevMonth">
-          <text class="nav-arrow">‹</text>
+          <text class="nav-arrow"> ‹ </text>
         </view>
-        <text class="month-text">{{ year }}年{{ month }}月</text>
+        <text class="month-text"> {{ year }}年{{ month }}月 </text>
         <view class="nav-btn" @tap="handleNextMonth">
-          <text class="nav-arrow">›</text>
+          <text class="nav-arrow"> › </text>
         </view>
         <view class="today-btn" @tap="goToday">
-          <text class="today-text">今天</text>
+          <text class="today-text"> 今天 </text>
         </view>
       </view>
     </view>
 
     <view class="calendar-body">
       <view class="weekday-row">
-        <text v-for="w in weekdays" :key="w" class="weekday-cell">{{ w }}</text>
+        <text v-for="w in weekdays" :key="w" class="weekday-cell">
+          {{ w }}
+        </text>
       </view>
 
       <view class="day-grid">
@@ -37,99 +39,115 @@
           }"
           @tap="cell.day ? onDayTap(cell) : undefined"
         >
-          <text v-if="cell.day" class="day-num">{{ cell.day }}</text>
-          <text v-if="cell.holidayName" class="day-tag holiday-tag">{{ cell.holidayName }}</text>
-          <text v-else-if="cell.isOvertime" class="day-tag overtime-tag">加班</text>
+          <text v-if="cell.day" class="day-num">
+            {{ cell.day }}
+          </text>
+          <text v-if="cell.holidayName" class="day-tag holiday-tag">
+            {{ cell.holidayName }}
+          </text>
+          <text v-else-if="cell.isOvertime" class="day-tag overtime-tag"> 加班 </text>
           <text v-else-if="showLeave && cell.isLeave" class="day-tag leave-tag">
             {{ cell.leaveType === 'half' ? '半天' : '请假' }}
           </text>
-          <text v-else-if="cell.clockIn" class="day-time">{{ cell.clockIn }}</text>
-          <text v-else-if="cell.isWeekend" class="day-tag rest-tag">休</text>
+          <text v-else-if="cell.clockIn" class="day-time">
+            {{ cell.clockIn }}
+          </text>
+          <text v-else-if="cell.isWeekend" class="day-tag rest-tag"> 休 </text>
         </view>
       </view>
     </view>
 
     <view class="legend">
       <view class="legend-item">
-        <view class="legend-dot recorded-dot"></view>
-        <text class="legend-text">已记录</text>
+        <view class="legend-dot recorded-dot" />
+        <text class="legend-text"> 已记录 </text>
       </view>
       <view class="legend-item">
-        <view class="legend-dot holiday-dot"></view>
-        <text class="legend-text">节假日</text>
+        <view class="legend-dot holiday-dot" />
+        <text class="legend-text"> 节假日 </text>
       </view>
-      <view class="legend-item" v-if="showLeave">
-        <view class="legend-dot leave-dot"></view>
-        <text class="legend-text">请假</text>
-      </view>
-      <view class="legend-item">
-        <view class="legend-dot overtime-dot"></view>
-        <text class="legend-text">加班</text>
+      <view v-if="showLeave" class="legend-item">
+        <view class="legend-dot leave-dot" />
+        <text class="legend-text"> 请假 </text>
       </view>
       <view class="legend-item">
-        <view class="legend-dot weekend-dot"></view>
-        <text class="legend-text">周末</text>
+        <view class="legend-dot overtime-dot" />
+        <text class="legend-text"> 加班 </text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot weekend-dot" />
+        <text class="legend-text"> 周末 </text>
       </view>
     </view>
 
-    <view class="detail-card" v-if="selectedDay">
+    <view v-if="selectedDay" class="detail-card">
       <view class="detail-header">
-        <text class="detail-date">{{ selectedDay.fullDate }}</text>
-        <text class="detail-week">{{ selectedDay.weekday }}</text>
-        <text v-if="selectedDay.holidayName" class="detail-holiday">{{
-          selectedDay.holidayName
-        }}</text>
-        <text v-if="selectedDay.isOvertime" class="detail-overtime">加班</text>
+        <text class="detail-date">
+          {{ selectedDay.fullDate }}
+        </text>
+        <text class="detail-week">
+          {{ selectedDay.weekday }}
+        </text>
+        <text v-if="selectedDay.holidayName" class="detail-holiday">
+          {{ selectedDay.holidayName }}
+        </text>
+        <text v-if="selectedDay.isOvertime" class="detail-overtime"> 加班 </text>
       </view>
 
       <view
         v-if="(selectedDay.isWeekend || selectedDay.isHoliday) && !selectedDay.hasRecord"
         class="detail-rest"
       >
-        <text class="rest-text">休息日</text>
+        <text class="rest-text"> 休息日 </text>
       </view>
 
       <view v-else class="detail-form">
         <view class="form-row">
-          <text class="form-label">上班时间</text>
+          <text class="form-label"> 上班时间 </text>
           <picker mode="time" :value="editClockIn" @change="onClockInChange">
             <view class="form-picker">
-              <text class="form-picker-text">{{ editClockIn || '09:00' }}</text>
+              <text class="form-picker-text">
+                {{ editClockIn || '09:00' }}
+              </text>
             </view>
           </picker>
         </view>
 
         <view class="form-row">
-          <text class="form-label">下班时间</text>
+          <text class="form-label"> 下班时间 </text>
           <picker mode="time" :value="editClockOut" @change="onClockOutChange">
             <view class="form-picker">
-              <text class="form-picker-text">{{ editClockOut || '18:00' }}</text>
+              <text class="form-picker-text">
+                {{ editClockOut || '18:00' }}
+              </text>
             </view>
           </picker>
         </view>
 
-        <view class="form-row" v-if="showLeave">
-          <text class="form-label">请假</text>
+        <view v-if="showLeave" class="form-row">
+          <text class="form-label"> 请假 </text>
           <switch :checked="editIsLeave" color="#2563EB" @change="onLeaveChange" />
         </view>
 
-        <view class="form-row" v-if="showLeave && editIsLeave">
-          <text class="form-label">类型</text>
+        <view v-if="showLeave && editIsLeave" class="form-row">
+          <text class="form-label"> 类型 </text>
           <picker :range="LEAVE_TYPES" :range-key="'label'" @change="onLeaveTypeChange">
             <view class="form-picker">
-              <text class="form-picker-text">{{ editLeaveType === 'half' ? '半天' : '全天' }}</text>
+              <text class="form-picker-text">
+                {{ editLeaveType === 'half' ? '半天' : '全天' }}
+              </text>
             </view>
           </picker>
         </view>
 
-        <view class="form-row hours-row" v-if="editClockIn && editClockOut && !editIsLeave">
-          <text class="form-label">工时</text>
-          <text class="hours-value">{{ formatHours(editClockIn, editClockOut) }}h</text>
+        <view v-if="editClockIn && editClockOut && !editIsLeave" class="form-row hours-row">
+          <text class="form-label"> 工时 </text>
+          <text class="hours-value"> {{ formatHours(editClockIn, editClockOut) }}h </text>
         </view>
 
         <view class="btn-row">
           <button class="btn btn-primary" @tap="saveRecord">保存</button>
-          <button class="btn btn-danger" v-if="selectedDay.hasRecord" @tap="deleteSelected">
+          <button v-if="selectedDay.hasRecord" class="btn btn-danger" @tap="deleteSelected">
             删除
           </button>
         </view>
@@ -177,7 +195,7 @@
   const year = ref(now.getFullYear())
   const month = ref(now.getMonth() + 1)
   const records = ref<ClockRecord[]>([])
-  const selectedDay = ref<any>(null)
+  const selectedDay = ref<CalendarCell | null>(null)
   const showLeave = ref(true)
 
   function loadRecords() {
@@ -307,8 +325,8 @@
     const existing = records.value.find((r) => r.date === dateStr)
 
     if (existing) {
-      existing.clockIn = editIsLeave.value ? undefined : editClockIn.value
-      existing.clockOut = editIsLeave.value ? undefined : editClockOut.value
+      existing.clockIn = editClockIn.value
+      existing.clockOut = editClockOut.value
       existing.isLeave = editIsLeave.value
       existing.leaveType = editIsLeave.value ? editLeaveType.value : undefined
       updateRecord(existing)
@@ -316,8 +334,8 @@
       const rec: ClockRecord = {
         id: generateId(),
         date: dateStr,
-        clockIn: editIsLeave.value ? undefined : editClockIn.value,
-        clockOut: editIsLeave.value ? undefined : editClockOut.value,
+        clockIn: editClockIn.value,
+        clockOut: editClockOut.value,
         isLeave: editIsLeave.value,
         leaveType: editIsLeave.value ? editLeaveType.value : undefined,
       }

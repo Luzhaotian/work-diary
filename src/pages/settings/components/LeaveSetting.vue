@@ -1,11 +1,11 @@
 <template>
   <view class="group">
-    <text class="group-title">请假功能</text>
+    <text class="group-title"> 请假功能 </text>
     <view class="cell">
-      <text class="cell-label">展示请假按钮</text>
+      <text class="cell-label"> 展示请假按钮 </text>
       <switch :checked="showLeave" color="#2563EB" @change="onToggle" />
     </view>
-    <text class="group-desc">关闭后，记录、历史、日历页面将隐藏请假相关操作</text>
+    <text class="group-desc"> 关闭后，记录、历史、日历页面将隐藏请假相关操作 </text>
   </view>
 </template>
 
@@ -13,11 +13,12 @@
   import { ref } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import { getShowLeave, setShowLeave } from '@/utils/storage'
+  import { getUniEventValue } from '@/types/event'
 
   const showLeave = ref(true)
 
-  function onToggle(e: any) {
-    const val = (e as { detail: { value: boolean } }).detail.value
+  function onToggle(e: Event) {
+    const val = getUniEventValue<boolean>(e)
     showLeave.value = val
     setShowLeave(val)
     uni.showToast({ title: '已保存', icon: 'success' })

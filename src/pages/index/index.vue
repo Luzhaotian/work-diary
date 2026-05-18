@@ -2,28 +2,28 @@
   <view class="page">
     <ClockDisplay />
 
-    <view class="card today-card">
+    <view v-if="!todayRecord?.isLeave" class="card today-card">
       <view class="card-header">
-        <text class="card-title">今日工时</text>
-        <text class="card-badge" v-if="todayRecord?.clockIn && todayRecord?.clockOut">
+        <text class="card-title"> 今日工时 </text>
+        <text v-if="todayRecord?.clockIn && todayRecord?.clockOut" class="card-badge">
           {{ todayHours }}
         </text>
       </view>
       <view class="time-row">
         <view class="time-block">
-          <text class="time-label">上班</text>
+          <text class="time-label"> 上班 </text>
           <text class="time-value" :class="{ filled: todayRecord?.clockIn }">
             {{ todayRecord?.clockIn || '--:--' }}
           </text>
         </view>
         <view class="time-divider">
-          <view class="divider-line"></view>
-          <text class="divider-text" v-if="todayRecord?.clockIn && todayRecord?.clockOut">
+          <view class="divider-line" />
+          <text v-if="todayRecord?.clockIn && todayRecord?.clockOut" class="divider-text">
             {{ todayHours }}
           </text>
         </view>
         <view class="time-block">
-          <text class="time-label">下班</text>
+          <text class="time-label"> 下班 </text>
           <text class="time-value" :class="{ filled: todayRecord?.clockOut }">
             {{ todayRecord?.clockOut || '--:--' }}
           </text>
@@ -31,26 +31,39 @@
       </view>
     </view>
 
+    <view v-if="todayRecord?.isLeave" class="card today-card leave-card">
+      <view class="card-header">
+        <text class="card-title"> 今日请假 </text>
+        <text class="card-badge leave-badge">
+          {{ leaveType === 'half' ? '半天假' : '全天假' }}
+        </text>
+      </view>
+    </view>
+
     <view class="card input-card">
       <view class="card-header">
-        <text class="card-title">记录时间</text>
+        <text class="card-title"> 记录时间 </text>
       </view>
       <view class="input-row">
         <view class="input-group">
-          <text class="input-label">上班时间</text>
+          <text class="input-label"> 上班时间 </text>
           <picker mode="time" :value="clockInTime" @change="onClockInChange">
             <view class="picker-box">
-              <text class="picker-text">{{ clockInTime }}</text>
-              <text class="picker-arrow">▾</text>
+              <text class="picker-text">
+                {{ clockInTime }}
+              </text>
+              <text class="picker-arrow"> ▾ </text>
             </view>
           </picker>
         </view>
         <view class="input-group">
-          <text class="input-label">下班时间</text>
+          <text class="input-label"> 下班时间 </text>
           <picker mode="time" :value="clockOutTime" @change="onClockOutChange">
             <view class="picker-box">
-              <text class="picker-text">{{ clockOutTime }}</text>
-              <text class="picker-arrow">▾</text>
+              <text class="picker-text">
+                {{ clockOutTime }}
+              </text>
+              <text class="picker-arrow"> ▾ </text>
             </view>
           </picker>
         </view>
@@ -63,16 +76,16 @@
           {{ todayRecord?.clockOut ? '修改下班' : '记录下班' }}
         </button>
       </view>
-      <view class="leave-section" v-if="showLeave">
+      <view v-if="showLeave" class="leave-section">
         <view class="leave-left">
-          <text class="leave-label">请假</text>
+          <text class="leave-label"> 请假 </text>
           <picker
             v-if="isLeaveToday"
             :range="LEAVE_TYPES"
             :range-key="'label'"
-            @change="onLeaveTypeChange"
+            @change="handleLeaveTypeChange"
           >
-            <text class="leave-type-btn">{{ leaveType === 'half' ? '半天' : '全天' }} ▾</text>
+            <text class="leave-type-btn"> {{ leaveType === 'half' ? '半天' : '全天' }} ▾ </text>
           </picker>
         </view>
         <switch :checked="isLeaveToday" color="#2563EB" @change="toggleLeave" />
@@ -81,25 +94,33 @@
 
     <view class="card stats-card">
       <view class="card-header">
-        <text class="card-title">本月概览</text>
-        <text class="card-sub">{{ monthlyStats.year }}年{{ monthlyStats.month }}月</text>
+        <text class="card-title"> 本月概览 </text>
+        <text class="card-sub"> {{ monthlyStats.year }}年{{ monthlyStats.month }}月 </text>
       </view>
       <view class="stats-grid">
         <view class="stat-item">
-          <text class="stat-num">{{ monthlyStats.totalWorkDays }}</text>
-          <text class="stat-desc">应出勤</text>
+          <text class="stat-num">
+            {{ monthlyStats.totalWorkDays }}
+          </text>
+          <text class="stat-desc"> 应出勤 </text>
         </view>
         <view class="stat-item">
-          <text class="stat-num">{{ monthlyStats.actualWorkDays }}</text>
-          <text class="stat-desc">实际</text>
+          <text class="stat-num">
+            {{ monthlyStats.actualWorkDays }}
+          </text>
+          <text class="stat-desc"> 实际 </text>
         </view>
-        <view class="stat-item" v-if="showLeave">
-          <text class="stat-num">{{ monthlyStats.leaveDays }}</text>
-          <text class="stat-desc">请假</text>
+        <view v-if="showLeave" class="stat-item">
+          <text class="stat-num">
+            {{ monthlyStats.leaveDays }}
+          </text>
+          <text class="stat-desc"> 请假 </text>
         </view>
         <view class="stat-item highlight">
-          <text class="stat-num">{{ monthlyStats.averageHours }}</text>
-          <text class="stat-desc">均工时(h)</text>
+          <text class="stat-num">
+            {{ monthlyStats.averageHours }}
+          </text>
+          <text class="stat-desc"> 均工时(h) </text>
         </view>
       </view>
     </view>
@@ -121,6 +142,7 @@
   import { calcHours, LEAVE_TYPES } from '@/utils/time'
   import { getLocalDateStr } from '@/utils/date'
   import { calcMonthlyStats } from '@/utils/stats'
+  import { getUniEventValue } from '@/types/event'
   import { useClockForm } from '@/composables/useClockForm'
 
   const {
@@ -159,17 +181,13 @@
     monthlyStats.value = calcMonthlyStats(y, m)
   }
 
-  function toggleLeave(e: { detail: { value: boolean } } | Event) {
+  function toggleLeave(e: Event) {
     const today = getLocalDateStr()
-    isLeaveToday.value = 'detail' in e ? (e.detail as { value: boolean }).value : false
+    isLeaveToday.value = getUniEventValue<boolean>(e)
 
     if (todayRecord.value) {
       todayRecord.value.isLeave = isLeaveToday.value
       todayRecord.value.leaveType = isLeaveToday.value ? leaveType.value : undefined
-      if (isLeaveToday.value) {
-        todayRecord.value.clockIn = undefined
-        todayRecord.value.clockOut = undefined
-      }
       updateRecord(todayRecord.value)
     } else {
       const rec: ClockRecord = {
@@ -182,6 +200,14 @@
       todayRecord.value = rec
     }
     loadMonthlyStats()
+  }
+
+  function handleLeaveTypeChange(e: Event) {
+    onLeaveTypeChange(e)
+    if (todayRecord.value) {
+      todayRecord.value.leaveType = leaveType.value
+      updateRecord(todayRecord.value)
+    }
   }
 
   function recordClockIn() {
@@ -285,6 +311,16 @@
     background: $blue;
     padding: 4rpx 16rpx;
     border-radius: 20rpx;
+  }
+
+  .leave-card {
+    .card-header {
+      margin-bottom: 0;
+    }
+  }
+
+  .card-badge.leave-badge {
+    background: #f59e0b;
   }
 
   .time-row {

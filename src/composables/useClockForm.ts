@@ -1,12 +1,6 @@
 import { ref } from 'vue'
 import { LEAVE_TYPES, type LeaveType } from '@/utils/time'
-
-function getEventValue<T>(e: { detail: { value: T } } | Event): T {
-  if ('detail' in e && e.detail && 'value' in e.detail) {
-    return (e.detail as { value: T }).value
-  }
-  return (e as { detail: { value: T } }).detail.value
-}
+import { getUniEventValue } from '@/types/event'
 
 export function useClockForm() {
   const clockIn = ref('09:00')
@@ -14,17 +8,17 @@ export function useClockForm() {
   const isLeave = ref(false)
   const leaveType = ref<LeaveType>('full')
 
-  function onClockInChange(e: { detail: { value: string } } | Event) {
-    clockIn.value = getEventValue<string>(e)
+  function onClockInChange(e: Event) {
+    clockIn.value = getUniEventValue<string>(e)
   }
-  function onClockOutChange(e: { detail: { value: string } } | Event) {
-    clockOut.value = getEventValue<string>(e)
+  function onClockOutChange(e: Event) {
+    clockOut.value = getUniEventValue<string>(e)
   }
-  function onLeaveChange(e: { detail: { value: boolean } } | Event) {
-    isLeave.value = getEventValue<boolean>(e)
+  function onLeaveChange(e: Event) {
+    isLeave.value = getUniEventValue<boolean>(e)
   }
-  function onLeaveTypeChange(e: { detail: { value: string } } | Event) {
-    leaveType.value = LEAVE_TYPES[getEventValue<string>(e)].value as LeaveType
+  function onLeaveTypeChange(e: Event) {
+    leaveType.value = LEAVE_TYPES[getUniEventValue<string>(e)].value as LeaveType
   }
 
   function loadFromRecord(record: {
