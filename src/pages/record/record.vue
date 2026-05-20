@@ -8,6 +8,9 @@
       <view class="month-btn" @tap="handleNextMonth">
         <text class="month-arrow"> › </text>
       </view>
+      <view class="export-btn" @tap="handleExport">
+        <text class="export-icon"> ⬇ </text>
+      </view>
     </view>
 
     <scroll-view scroll-y class="list-wrap">
@@ -211,6 +214,79 @@
   function goStats() {
     uni.navigateTo({ url: '/pages/stats/stats' })
   }
+
+  function handleExport() {
+    if (records.value.length === 0) {
+      uni.showToast({ title: '暂无记录', icon: 'none' })
+      return
+    }
+
+    const header = '日期\t上班\t下班\t工时(h)\t请假\t请假类型'
+    const rows = records.value.map((r) => {
+      const hours = r.clockIn && r.clockOut ? formatHours(r.clockIn, r.clockOut) : ''
+      const leave = r.isLeave ? '是' : '否'
+      const leaveType = r.isLeave ? (r.leaveType === 'half' ? '半天' : '全天') : ''
+      return [r.date, r.clockIn || '', r.clockOut || '', hours, leave, leaveType].join('\t')
+    })
+    const content = [header, ...rows].join('\n')
+    const fileName = `工时记录_${currentYear.value}_${String(currentMonth.value).padStart(2, '0')}.csv`
+
+    uni.showActionSheet({
+      itemList: ['复制到剪贴板'],
+      success(res) {
+        if (res.tapIndex === 0) {
+          exportAsFile(content, fileName)
+        } else {
+          uni.setClipboardData({
+            data: content,
+            success() {
+              uni.showToast({ title: '已复制', icon: 'success' })
+            },
+          })
+        }
+      },
+    })
+  }
+
+  function exportAsFile(content: string, fileName: string) {
+    const fs = uni.getFileSystemManager()
+    // @ts-expect-error wx.env only exists in WeChat MP
+    const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`
+    try {
+      fs.writeFileSync(filePath, '\uFEFF' + content, 'utf8')
+    } catch {
+      uni.showToast({ title: '写入文件失败', icon: 'none' })
+      return
+    }
+    uni.shareFileMessage({
+      filePath,
+      fileName,
+      success() {
+        uni.showToast({ title: '已发送', icon: 'success' })
+      },
+      fail() {
+        uni.openDocument({
+          filePath,
+          showMenu: true,
+          success() {
+            uni.showToast({ title: '已打开，可转发保存', icon: 'none' })
+          },
+          fail() {
+            fallbackCopy(content)
+          },
+        })
+      },
+    })
+  }
+
+  function fallbackCopy(content: string) {
+    uni.setClipboardData({
+      data: content,
+      success() {
+        uni.showToast({ title: '已复制到剪贴板', icon: 'success' })
+      },
+    })
+  }
 </script>
 
 <style lang="scss">
@@ -254,6 +330,23 @@
     font-size: 32rpx;
     font-weight: 700;
     color: $gray-900;
+  }
+
+  .export-btn {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: $blue-bg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 24rpx;
+  }
+
+  .export-icon {
+    font-size: 24rpx;
+    color: $blue;
   }
 
   .list-wrap {
