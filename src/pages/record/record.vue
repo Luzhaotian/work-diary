@@ -8,6 +8,9 @@
       <view class="month-btn" @tap="handleNextMonth">
         <text class="month-arrow"> › </text>
       </view>
+      <!-- <view class="import-btn" @tap="handleImport">
+        <text class="import-icon"> ⬆ </text>
+      </view> -->
       <view class="export-btn" @tap="handleExport">
         <text class="export-icon"> ⬇ </text>
       </view>
@@ -122,7 +125,15 @@
   import { ref } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import type { ClockRecord } from '@/types/clock'
-  import { getRecordsByMonth, updateRecord, deleteRecord, getShowLeave } from '@/utils/storage'
+  import {
+    getRecordsByMonth,
+    updateRecord,
+    deleteRecord,
+    getShowLeave,
+    // getRecords,
+    // saveRecords,
+    // generateId,
+  } from '@/utils/storage'
   import { formatHours, LEAVE_TYPES } from '@/utils/time'
   import { formatDay, formatWeekday, prevMonth, nextMonth } from '@/utils/date'
   import { useClockForm } from '@/composables/useClockForm'
@@ -228,17 +239,32 @@
       const leaveType = r.isLeave ? (r.leaveType === 'half' ? '半天' : '全天') : ''
       return [r.date, r.clockIn || '', r.clockOut || '', hours, leave, leaveType].join('\t')
     })
-    const content = [header, ...rows].join('\n')
-    const fileName = `工时记录_${currentYear.value}_${String(currentMonth.value).padStart(2, '0')}.csv`
+    const tsvContent = [header, ...rows].join('\n')
+
+    const textHeader = '日期\t上班\t下班\t工时\t请假'
+    const textRows = records.value.map((r) => {
+      const leave = r.isLeave ? (r.leaveType === 'half' ? '半天假' : '全天假') : ''
+      const clockIn = r.isLeave ? '--:--' : r.clockIn || '--:--'
+      const clockOut = r.isLeave ? '--:--' : r.clockOut || '--:--'
+      const hours = r.isLeave
+        ? '0h'
+        : r.clockIn && r.clockOut
+          ? formatHours(r.clockIn, r.clockOut) + 'h'
+          : '0h'
+      return [r.date, clockIn, clockOut, hours, leave].join('\t')
+    })
+    const textContent = [textHeader, ...textRows].join('\n')
+
+    const fileName = `打卡记录_${currentYear.value}_${String(currentMonth.value).padStart(2, '0')}.csv`
 
     uni.showActionSheet({
-      itemList: ['复制到剪贴板'],
+      itemList: ['导出为文件', '复制文本'],
       success(res) {
         if (res.tapIndex === 0) {
-          exportAsFile(content, fileName)
+          exportAsFile(tsvContent, fileName)
         } else {
           uni.setClipboardData({
-            data: content,
+            data: textContent,
             success() {
               uni.showToast({ title: '已复制', icon: 'success' })
             },
@@ -287,6 +313,112 @@
       },
     })
   }
+
+  // function handleImport() {
+  //   uni.chooseMessageFile({
+  //     count: 1,
+  //     type: 'file',
+  //     extension: ['.csv', '.tsv', '.txt'],
+  //     success(res) {
+  //       const file = res.tempFiles[0]
+  //       const fs = uni.getFileSystemManager()
+  //       try {
+  //         const content = fs.readFileSync(file.path, 'utf8') as string
+  //         const parsed = parseCSVContent(content)
+  //         if (parsed.length === 0) {
+  //           uni.showToast({ title: '未识别到有效记录', icon: 'none' })
+  //           return
+  //         }
+  //         uni.showModal({
+  //           title: '导入确认',
+  //           content: `识别到 ${parsed.length} 条记录，将覆盖相同日期的已有数据，是否继续？`,
+  //           confirmColor: '#2563EB',
+  //           success(modalRes) {
+  //             if (modalRes.confirm) {
+  //               doImport(parsed)
+  //             }
+  //           },
+  //         })
+  //       } catch {
+  //         uni.showToast({ title: '读取文件失败', icon: 'none' })
+  //       }
+  //     },
+  //     fail() {
+  //       // 用户取消选择，不做提示
+  //     },
+  //   })
+  // }
+
+  // function parseCSVContent(content: string): Omit<ClockRecord, 'id'>[] {
+  //   // 去掉 BOM
+  //   const text = content.replace(/^\uFEFF/, '').trim()
+  //   const lines = text.split(/\r?\n/).filter((l) => l.trim())
+  //   if (lines.length < 2) return []
+
+  //   const header = lines[0].split(/[\t,]/)
+  //   // 查找各列索引
+  //   const dateIdx = header.findIndex((h) => h.includes('日期'))
+  //   const clockInIdx = header.findIndex((h) => h.includes('上班'))
+  //   const clockOutIdx = header.findIndex((h) => h.includes('下班'))
+  //   const leaveIdx = header.findIndex((h) => h.includes('请假') && !h.includes('类型'))
+  //   const leaveTypeIdx = header.findIndex((h) => h.includes('请假类型'))
+
+  //   if (dateIdx === -1) return []
+
+  //   const records: Omit<ClockRecord, 'id'>[] = []
+  //   for (let i = 1; i < lines.length; i++) {
+  //     const cols = lines[i].split(/[\t,]/)
+  //     const date = (cols[dateIdx] || '').trim()
+  //     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+
+  //     let clockIn = clockInIdx !== -1 ? (cols[clockInIdx] || '').trim() : ''
+  //     let clockOut = clockOutIdx !== -1 ? (cols[clockOutIdx] || '').trim() : ''
+  //     // 过滤无效时间
+  //     if (!/^\d{2}:\d{2}$/.test(clockIn)) clockIn = ''
+  //     if (!/^\d{2}:\d{2}$/.test(clockOut)) clockOut = ''
+
+  //     const leaveVal = leaveIdx !== -1 ? (cols[leaveIdx] || '').trim() : ''
+  //     const leaveTypeVal = leaveTypeIdx !== -1 ? (cols[leaveTypeIdx] || '').trim() : ''
+  //     const isLeave = leaveVal === '是' || leaveVal.includes('假')
+  //     let leaveType: 'full' | 'half' | undefined
+  //     if (isLeave) {
+  //       leaveType = leaveTypeVal.includes('半') || leaveVal.includes('半') ? 'half' : 'full'
+  //     }
+
+  //     records.push({
+  //       date,
+  //       clockIn: clockIn || undefined,
+  //       clockOut: clockOut || undefined,
+  //       isLeave,
+  //       leaveType,
+  //     })
+  //   }
+  //   return records
+  // }
+
+  // function doImport(parsed: Omit<ClockRecord, 'id'>[]) {
+  //   const existing = getRecords()
+  //   const existingMap = new Map(existing.map((r) => [r.date, r]))
+
+  //   for (const rec of parsed) {
+  //     const old = existingMap.get(rec.date)
+  //     if (old) {
+  //       // 覆盖已有记录
+  //       old.clockIn = rec.clockIn
+  //       old.clockOut = rec.clockOut
+  //       old.isLeave = rec.isLeave
+  //       old.leaveType = rec.leaveType
+  //     } else {
+  //       const newRec: ClockRecord = { ...rec, id: generateId() }
+  //       existing.push(newRec)
+  //       existingMap.set(rec.date, newRec)
+  //     }
+  //   }
+
+  //   saveRecords(existing)
+  //   loadRecords()
+  //   uni.showToast({ title: `已导入 ${parsed.length} 条`, icon: 'success' })
+  // }
 </script>
 
 <style lang="scss">
@@ -342,6 +474,23 @@
     justify-content: center;
     position: absolute;
     right: 24rpx;
+  }
+
+  .import-btn {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: $blue-bg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    left: 24rpx;
+  }
+
+  .import-icon {
+    font-size: 24rpx;
+    color: $blue;
   }
 
   .export-icon {
