@@ -25,6 +25,14 @@
 - H5 (Web)
 - 微信小程序
 
+## 体验小程序
+
+微信扫码即可体验「打卡办公」：
+
+<p align="center">
+  <img src="docs/miniprogram-qrcode.jpg" alt="打卡办公微信小程序码" width="280" />
+</p>
+
 ## 快速开始
 
 ### 安装依赖
