@@ -2,6 +2,7 @@
   <view class="page">
     <LeaveSetting v-if="currentType === 'leave'" />
     <CalendarSetting v-else-if="currentType === 'calendar'" />
+    <HoursSetting v-else-if="currentType === 'hours'" />
   </view>
 </template>
 
@@ -10,11 +11,20 @@
   import { onLoad } from '@dcloudio/uni-app'
   import LeaveSetting from './components/LeaveSetting.vue'
   import CalendarSetting from './components/CalendarSetting.vue'
+  import HoursSetting from './components/HoursSetting.vue'
 
   const currentType = ref('')
 
+  const titles: Record<string, string> = {
+    leave: '按钮设置',
+    calendar: '日历设置',
+    hours: '午休扣除',
+  }
+
   onLoad((query?: Record<string, string>) => {
-    currentType.value = query?.type || 'leave'
+    const type = query?.type || 'leave'
+    currentType.value = type
+    uni.setNavigationBarTitle({ title: titles[type] || '设置详情' })
   })
 </script>
 

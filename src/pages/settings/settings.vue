@@ -17,6 +17,15 @@
           <text class="cell-arrow"> › </text>
         </view>
       </view>
+      <view class="cell" @tap="goDetail('hours')">
+        <text class="cell-label"> 午休扣除 </text>
+        <view class="cell-right">
+          <text class="cell-value">
+            {{ lunchBreakText }}
+          </text>
+          <text class="cell-arrow"> › </text>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -24,9 +33,10 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
-  import { getShowLeave } from '@/utils/storage'
+  import { getLunchBreakText, getShowLeave } from '@/utils/storage'
 
   const showLeave = ref(true)
+  const lunchBreakText = ref('不扣除')
   const showLeaveText = computed(() => (showLeave.value ? '已开启' : '已关闭'))
 
   function goDetail(type: string) {
@@ -35,6 +45,7 @@
 
   onShow(() => {
     showLeave.value = getShowLeave()
+    lunchBreakText.value = getLunchBreakText()
   })
 </script>
 
@@ -65,6 +76,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .cell + .cell {
+    margin-top: 16rpx;
   }
 
   .cell-label {

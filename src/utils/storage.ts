@@ -77,3 +77,42 @@ export function getShowLeave(): boolean {
 export function setShowLeave(show: boolean): void {
   uni.setStorageSync(SHOW_LEAVE_KEY, show)
 }
+
+export const LUNCH_BREAK_OPTIONS = [
+  { hours: 0, label: '不扣除' },
+  { hours: 0.5, label: '0.5小时' },
+  { hours: 1, label: '1小时' },
+  { hours: 1.5, label: '1.5小时' },
+  { hours: 2, label: '2小时' },
+] as const
+
+const LUNCH_BREAK_KEY = 'lunch_break_hours'
+const LUNCH_START_KEY = 'lunch_break_start'
+const DEFAULT_LUNCH_START = '12:00'
+
+export function getLunchBreakHours(): number {
+  const val = uni.getStorageSync(LUNCH_BREAK_KEY)
+  if (val === '' || val == null) return 0
+  const hours = Number(val)
+  return LUNCH_BREAK_OPTIONS.some((opt) => opt.hours === hours) ? hours : 0
+}
+
+export function setLunchBreakHours(hours: number): void {
+  uni.setStorageSync(LUNCH_BREAK_KEY, hours)
+}
+
+export function getLunchStart(): string {
+  const val = uni.getStorageSync(LUNCH_START_KEY)
+  return typeof val === 'string' && /^\d{2}:\d{2}$/.test(val) ? val : DEFAULT_LUNCH_START
+}
+
+export function setLunchStart(time: string): void {
+  uni.setStorageSync(LUNCH_START_KEY, time)
+}
+
+export function getLunchBreakText(): string {
+  const hours = getLunchBreakHours()
+  const opt = LUNCH_BREAK_OPTIONS.find((item) => item.hours === hours)
+  if (!opt || opt.hours === 0) return '不扣除'
+  return `${opt.label} · ${getLunchStart()}`
+}
