@@ -14,6 +14,9 @@
       <view class="cell" @tap="goDetail('calendar')">
         <text class="cell-label"> 日历设置 </text>
         <view class="cell-right">
+          <text class="cell-value">
+            {{ calendarText }}
+          </text>
           <text class="cell-arrow"> › </text>
         </view>
       </view>
@@ -33,10 +36,11 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
-  import { getLunchBreakText, getShowLeave } from '@/utils/storage'
+  import { getCalendarSettingText, getLunchBreakText, getShowLeave } from '@/utils/storage'
 
   const showLeave = ref(true)
   const lunchBreakText = ref('不扣除')
+  const calendarText = ref('双休 · 法定节假日')
   const showLeaveText = computed(() => (showLeave.value ? '已开启' : '已关闭'))
 
   function goDetail(type: string) {
@@ -46,6 +50,7 @@
   onShow(() => {
     showLeave.value = getShowLeave()
     lunchBreakText.value = getLunchBreakText()
+    calendarText.value = getCalendarSettingText()
   })
 </script>
 

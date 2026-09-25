@@ -2,6 +2,15 @@
 
 ## 开发环境
 
+### 提交校验
+
+`npm install` 后 husky 会注册 `.husky/pre-commit`：
+
+1. `lint-staged`：对暂存的 `.vue` / `.ts` / `.js` 等执行 `eslint --fix`
+2. `npm run type-check`：全量 `vue-tsc --noEmit`
+
+校验失败时 commit 会被拦截。跳过校验需自行使用 `git commit --no-verify`（不推荐）。
+
 ### HBuilderX
 
 通过命令行启动 HBuilderX 并确保使用内置 Node：
@@ -29,6 +38,12 @@ const uni = (UniPlugin as any).default || UniPlugin
 - 请假开关切换时自动保存到 storage
 - 请假类型切换时也会同步更新 storage（不只是更新内存状态）
 - 可在设置中全局控制是否展示请假按钮
+
+### 日历设置
+
+- **休息制度**：双休 / 单休（休周六或休周日）/ 大小周（自选参考周为大周或小周，隔周交替）/ 无休
+- **法定节假日**：开启则按中国法定节假日与调休；关闭则为「无法定节假日」，仅按休息制度判断
+- 影响日历着色、加班标记，以及统计中的应出勤天数
 
 ### 历史记录导出
 

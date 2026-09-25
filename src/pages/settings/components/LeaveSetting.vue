@@ -15,7 +15,8 @@
   import { getShowLeave, setShowLeave } from '@/utils/storage'
   import { getUniEventValue } from '@/types/event'
 
-  const showLeave = ref(true)
+  // v-if 延迟挂载时需在 setup 读存储
+  const showLeave = ref(getShowLeave())
 
   function onToggle(e: Event) {
     const val = getUniEventValue<boolean>(e)

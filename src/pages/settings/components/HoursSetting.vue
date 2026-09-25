@@ -51,8 +51,14 @@
   } from '@/utils/storage'
   import { getUniEventValue } from '@/types/event'
 
-  const hours = ref(0)
-  const start = ref('12:00')
+  // v-if 延迟挂载时页面 onShow 可能早于子组件，需在 setup 读存储
+  const hours = ref(getLunchBreakHours())
+  const start = ref(getLunchStart())
+
+  function load() {
+    hours.value = getLunchBreakHours()
+    start.value = getLunchStart()
+  }
 
   function onSelect(value: number) {
     if (hours.value === value) return
@@ -68,10 +74,7 @@
     uni.showToast({ title: '已保存', icon: 'success' })
   }
 
-  onShow(() => {
-    hours.value = getLunchBreakHours()
-    start.value = getLunchStart()
-  })
+  onShow(load)
 </script>
 
 <style lang="scss">

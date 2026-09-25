@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+set -e
+
+# IDE / GUI git often omits nvm from PATH — restore a usable node
+if ! command -v node >/dev/null 2>&1; then
+  NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -V | tail -1)"
+  [ -n "$NVM_BIN" ] && PATH="$NVM_BIN:$PATH"
+  export PATH
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "husky: node not found. Open a terminal with nvm loaded, or install Node." >&2
+  exit 127
+fi
+
+# Prefer local package binaries (no npx needed)
+PATH="$(pwd)/node_modules/.bin:$PATH"
+export PATH
+
+lint-staged
+vue-tsc --noEmit

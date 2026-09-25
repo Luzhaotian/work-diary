@@ -39,3 +39,24 @@ export function getLocalTimeStr(d: Date = new Date()): string {
 export function formatFullDate(d: Date = new Date(), type: WeekdayType = 'full'): string {
   return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日 ${formatWeekday(d, type)}`
 }
+
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/** 所在周的周一（周一为一周起始） */
+export function getWeekMonday(dateStr: string): string {
+  const date = parseLocalDate(dateStr)
+  const day = date.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  date.setDate(date.getDate() + diff)
+  return getLocalDateStr(date)
+}
+
+/** 两个周一之间相差的周数（可为负） */
+export function weeksBetweenMondays(mondayA: string, mondayB: string): number {
+  const a = parseLocalDate(mondayA).getTime()
+  const b = parseLocalDate(mondayB).getTime()
+  return Math.round((b - a) / (7 * 24 * 60 * 60 * 1000))
+}

@@ -168,7 +168,7 @@
     generateId,
     getShowLeave,
   } from '@/utils/storage'
-  import { isWorkdayFromLib, isHolidayFromLib, getFestivalName } from '@/utils/workday'
+  import { isHolidayFromLib, getFestivalName, isRestWeekend } from '@/utils/workday'
   import { formatHours, LEAVE_TYPES } from '@/utils/time'
   import {
     getLocalDateStr,
@@ -247,13 +247,10 @@
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year.value}-${String(month.value).padStart(2, '0')}-${String(d).padStart(2, '0')}`
       const dateObj = new Date(year.value, month.value - 1, d)
-      const dayOfWeek = dateObj.getDay()
-      const isWkend = dayOfWeek === 0 || dayOfWeek === 6
-      const isWorkday = isWorkdayFromLib(dateStr)
       const isHol = isHolidayFromLib(dateStr)
       const hName = getFestivalName(dateStr)
       const record = records.value.find((r) => r.date === dateStr)
-      const isActualWeekend = isWkend && !isWorkday
+      const isActualWeekend = isRestWeekend(dateStr)
 
       cells.push({
         day: d,
