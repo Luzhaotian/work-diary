@@ -11,7 +11,7 @@
           <text class="cell-arrow"> › </text>
         </view>
       </view>
-      <view class="cell" @tap="goDetail('calendar')">
+      <view class="cell" @tap="goCalendarFromGuide">
         <text class="cell-label"> 日历设置 </text>
         <view class="cell-right">
           <text class="cell-value">
@@ -30,27 +30,62 @@
         </view>
       </view>
     </view>
+
+    <GuideOverlay
+      :visible="showGuide"
+      title="打开日历设置"
+      desc="在这里选择休息制度（双休 / 单休 / 大小周 / 无休）和是否遵循法定节假日。"
+      primary-text="去看看"
+      secondary-text="知道了"
+      placement="center"
+      @primary="goCalendarFromGuide"
+      @secondary="dismissGuide"
+      @dismiss="dismissGuide"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
-  import { getCalendarSettingText, getLunchBreakText, getShowLeave } from '@/utils/storage'
+  import GuideOverlay from '@/components/GuideOverlay.vue'
+  import {
+    getCalendarSettingText,
+    getLunchBreakText,
+    getShowLeave,
+    getGuideShowSettingsTip,
+    setGuideShowSettingsTip,
+    setGuideCompleted,
+  } from '@/utils/storage'
 
   const showLeave = ref(true)
   const lunchBreakText = ref('不扣除')
   const calendarText = ref('双休 · 法定节假日')
+  const showGuide = ref(false)
   const showLeaveText = computed(() => (showLeave.value ? '已开启' : '已关闭'))
 
   function goDetail(type: string) {
     uni.navigateTo({ url: `/pages/settings/detail?type=${type}` })
   }
 
+  function dismissGuide() {
+    showGuide.value = false
+    setGuideShowSettingsTip(false)
+    setGuideCompleted(true)
+  }
+
+  function goCalendarFromGuide() {
+    if (showGuide.value) {
+      dismissGuide()
+    }
+    goDetail('calendar')
+  }
+
   onShow(() => {
     showLeave.value = getShowLeave()
     lunchBreakText.value = getLunchBreakText()
     calendarText.value = getCalendarSettingText()
+    showGuide.value = getGuideShowSettingsTip()
   })
 </script>
 

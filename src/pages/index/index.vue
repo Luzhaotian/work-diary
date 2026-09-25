@@ -124,11 +124,24 @@
         </view>
       </view>
     </view>
+
+    <GuideOverlay
+      :visible="showGuide"
+      title="配置工作日历"
+      desc="在底部「设置」里可选择双休、单休、大小周，以及是否遵循法定节假日。"
+      primary-text="去设置"
+      secondary-text="知道了"
+      placement="bottom"
+      @primary="goSettingsFromGuide"
+      @secondary="dismissGuide"
+      @dismiss="dismissGuide"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
   import ClockDisplay from '@/components/ClockDisplay.vue'
+  import GuideOverlay from '@/components/GuideOverlay.vue'
   import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import type { ClockRecord, MonthlyStats } from '@/types/clock'
@@ -138,6 +151,9 @@
     updateRecord,
     generateId,
     getShowLeave,
+    getGuideCompleted,
+    setGuideCompleted,
+    setGuideShowSettingsTip,
   } from '@/utils/storage'
   import { calcHours, LEAVE_TYPES } from '@/utils/time'
   import { getLocalDateStr } from '@/utils/date'
@@ -157,6 +173,7 @@
 
   const todayRecord = ref<ClockRecord | undefined>()
   const showLeave = ref(true)
+  const showGuide = ref(false)
   const now = new Date()
   const monthlyStats = ref<MonthlyStats>({
     year: now.getFullYear(),
@@ -174,6 +191,19 @@
     }
     return '--'
   })
+
+  function dismissGuide() {
+    showGuide.value = false
+    setGuideCompleted(true)
+    setGuideShowSettingsTip(false)
+  }
+
+  function goSettingsFromGuide() {
+    showGuide.value = false
+    setGuideCompleted(true)
+    setGuideShowSettingsTip(true)
+    uni.switchTab({ url: '/pages/settings/settings' })
+  }
 
   function loadMonthlyStats() {
     const y = now.getFullYear()
@@ -267,6 +297,7 @@
 
   onShow(() => {
     refreshData()
+    showGuide.value = !getGuideCompleted()
   })
 </script>
 

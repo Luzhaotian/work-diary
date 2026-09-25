@@ -197,6 +197,29 @@ export function setUseHolidays(use: boolean): void {
   uni.setStorageSync(USE_HOLIDAYS_KEY, use)
 }
 
+const GUIDE_COMPLETED_KEY = 'guide_completed'
+/** 首页点「去设置」后，在设置页再高亮日历设置一项 */
+const GUIDE_SHOW_SETTINGS_TIP_KEY = 'guide_show_settings_tip'
+
+/** 首次蒙层引导是否已看过（含点「知道了」） */
+export function getGuideCompleted(): boolean {
+  const val = uni.getStorageSync(GUIDE_COMPLETED_KEY)
+  return val === '' || val == null ? false : !!val
+}
+
+export function setGuideCompleted(done: boolean): void {
+  uni.setStorageSync(GUIDE_COMPLETED_KEY, done)
+}
+
+export function getGuideShowSettingsTip(): boolean {
+  return !!uni.getStorageSync(GUIDE_SHOW_SETTINGS_TIP_KEY)
+}
+
+export function setGuideShowSettingsTip(show: boolean): void {
+  if (show) uni.setStorageSync(GUIDE_SHOW_SETTINGS_TIP_KEY, true)
+  else uni.removeStorageSync(GUIDE_SHOW_SETTINGS_TIP_KEY)
+}
+
 export function getCalendarSettingText(): string {
   const mode = getWeekendMode()
   const modeOpt = WEEKEND_MODE_OPTIONS.find((item) => item.value === mode)
