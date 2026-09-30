@@ -29,6 +29,15 @@
           <text class="cell-arrow"> › </text>
         </view>
       </view>
+      <view class="cell" @tap="goDetail('autoclock')">
+        <text class="cell-label"> 自动打卡 </text>
+        <view class="cell-right">
+          <text class="cell-value">
+            {{ autoClockText }}
+          </text>
+          <text class="cell-arrow"> › </text>
+        </view>
+      </view>
     </view>
 
     <GuideOverlay
@@ -52,6 +61,7 @@
   import {
     getCalendarSettingText,
     getLunchBreakText,
+    getAutoClockSettingText,
     getShowLeave,
     getGuideShowSettingsTip,
     setGuideShowSettingsTip,
@@ -61,6 +71,7 @@
   const showLeave = ref(true)
   const lunchBreakText = ref('不扣除')
   const calendarText = ref('双休 · 法定节假日')
+  const autoClockText = ref('已关闭')
   const showGuide = ref(false)
   const showLeaveText = computed(() => (showLeave.value ? '已开启' : '已关闭'))
 
@@ -85,6 +96,7 @@
     showLeave.value = getShowLeave()
     lunchBreakText.value = getLunchBreakText()
     calendarText.value = getCalendarSettingText()
+    autoClockText.value = getAutoClockSettingText()
     showGuide.value = getGuideShowSettingsTip()
   })
 </script>

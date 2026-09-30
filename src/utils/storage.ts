@@ -158,10 +158,13 @@ export function cleanOldData(): void {
   uni.setStorageSync(CLEAN_THROTTLE_KEY, today)
 }
 
+/** 取指定日期的记录（同一天唯一，见 upsertRecordByDate） */
+export function getRecordByDate(date: string): ClockRecord | undefined {
+  return getRecords().find((r) => r.date === date)
+}
+
 export function getTodayRecord(): ClockRecord | undefined {
-  const records = getRecords()
-  const today = getLocalDateStr()
-  return records.find((r) => r.date === today)
+  return getRecordByDate(getLocalDateStr())
 }
 
 export function generateId(): string {
@@ -347,6 +350,90 @@ export function getUseHolidays(): boolean {
 
 export function setUseHolidays(use: boolean): void {
   writeSetting(USE_HOLIDAYS_KEY, use)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  自动打卡                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const AUTO_CLOCK_ENABLED_KEY = 'auto_clock_enabled'
+const AUTO_CLOCK_ON_LAUNCH_KEY = 'auto_clock_on_launch'
+const AUTO_CLOCK_SCHEDULED_KEY = 'auto_clock_scheduled'
+const AUTO_CLOCK_IN_TIME_KEY = 'auto_clock_in_time'
+const AUTO_CLOCK_OUT_TIME_KEY = 'auto_clock_out_time'
+
+/** 自动打卡总开关，默认关闭 */
+export function getAutoClockEnabled(): boolean {
+  return (
+    readSetting(AUTO_CLOCK_ENABLED_KEY, (val) => (val === '' || val == null ? undefined : !!val)) ??
+    false
+  )
+}
+
+export function setAutoClockEnabled(on: boolean): void {
+  writeSetting(AUTO_CLOCK_ENABLED_KEY, on)
+}
+
+/** 进入应用时补卡，默认开启（总开关打开后才生效） */
+export function getAutoClockOnLaunch(): boolean {
+  return (
+    readSetting(AUTO_CLOCK_ON_LAUNCH_KEY, (val) =>
+      val === '' || val == null ? undefined : !!val,
+    ) ?? true
+  )
+}
+
+export function setAutoClockOnLaunch(on: boolean): void {
+  writeSetting(AUTO_CLOCK_ON_LAUNCH_KEY, on)
+}
+
+/** 应用开着时到点自动打卡，默认开启（总开关打开后才生效） */
+export function getAutoClockScheduled(): boolean {
+  return (
+    readSetting(AUTO_CLOCK_SCHEDULED_KEY, (val) =>
+      val === '' || val == null ? undefined : !!val,
+    ) ?? true
+  )
+}
+
+export function setAutoClockScheduled(on: boolean): void {
+  writeSetting(AUTO_CLOCK_SCHEDULED_KEY, on)
+}
+
+/** 自动打卡的上班时间，默认 09:00 */
+export function getAutoClockInTime(): string {
+  return (
+    readSetting(AUTO_CLOCK_IN_TIME_KEY, (val) =>
+      typeof val === 'string' && /^\d{2}:\d{2}$/.test(val) ? val : undefined,
+    ) ?? '09:00'
+  )
+}
+
+export function setAutoClockInTime(time: string): void {
+  writeSetting(AUTO_CLOCK_IN_TIME_KEY, time)
+}
+
+/** 自动打卡的下班时间，默认 18:00 */
+export function getAutoClockOutTime(): string {
+  return (
+    readSetting(AUTO_CLOCK_OUT_TIME_KEY, (val) =>
+      typeof val === 'string' && /^\d{2}:\d{2}$/.test(val) ? val : undefined,
+    ) ?? '18:00'
+  )
+}
+
+export function setAutoClockOutTime(time: string): void {
+  writeSetting(AUTO_CLOCK_OUT_TIME_KEY, time)
+}
+
+/** 设置主页的摘要文案 */
+export function getAutoClockSettingText(): string {
+  if (!getAutoClockEnabled()) return '已关闭'
+  const modes: string[] = []
+  if (getAutoClockOnLaunch()) modes.push('进入补卡')
+  if (getAutoClockScheduled()) modes.push('到点打卡')
+  if (modes.length === 0) return '已开启（未选方式）'
+  return `${modes.join(' · ')} ${getAutoClockInTime()}/${getAutoClockOutTime()}`
 }
 
 const GUIDE_COMPLETED_KEY = 'guide_completed'

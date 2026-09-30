@@ -10,8 +10,10 @@
 - **日历视图** - 以日历形式直观展示每日打卡状态
 - **工时统计** - 自动计算月度工时、出勤天数、平均工时等数据，支持多时间范围切换
 - **中国工作日** - 可配置双休/单休（休周六或休周日）/大小周/无休，以及是否遵循法定节假日与调休
+- **自动打卡** - 可配置进入应用时补卡、应用开着到点打卡，写入设置里的上下班时间；
+  休息日（含法定节假日与调休）不打卡，不覆盖手动打卡与请假
 - **首次引导** - 半透明蒙层指引至「设置 → 日历设置」，不改动任何配置
-- **个性设置** - 支持按钮设置、日历设置、午休扣除等个性化配置
+- **个性设置** - 支持按钮设置、日历设置、午休扣除、自动打卡等个性化配置
 
 ## 技术栈
 
@@ -90,7 +92,8 @@ src/
 │       ├── components/  # 设置子组件
 │       │   ├── LeaveSetting.vue     # 请假功能设置
 │       │   ├── CalendarSetting.vue  # 日历设置（休息制度 / 法定节假日）
-│       │   └── HoursSetting.vue     # 午休扣除设置
+│       │   ├── HoursSetting.vue     # 午休扣除设置
+│       │   └── AutoClockSetting.vue # 自动打卡设置
 │       ├── detail.vue       # 设置详情页（按 ?type= 渲染对应子组件）
 │       └── settings.vue     # 设置主页
 ├── components/      # 公共组件
@@ -98,7 +101,8 @@ src/
 │   ├── ClockEditForm.vue  # 打卡编辑表单（首页/历史/日历共用）
 │   └── GuideOverlay.vue   # 首次引导蒙层
 ├── composables/     # 组合式函数
-│   └── useClockForm.ts    # 打卡表单状态与事件逻辑
+│   ├── useClockForm.ts    # 打卡表单状态与事件逻辑
+│   └── useAutoClock.ts    # 自动打卡（进入补卡 / 到点打卡）
 ├── types/           # TypeScript 类型定义
 │   ├── clock.ts     # ClockRecord / MonthlyStats / ClockFormController
 │   └── event.ts     # uni-app 事件类型

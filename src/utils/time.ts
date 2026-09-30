@@ -4,7 +4,8 @@ import { getLunchBreakHours, getLunchStart } from '@/utils/storage'
 // LeaveType 的唯一定义在 types/clock.ts，此处再导出以兼容既有 import 路径
 export type { LeaveType }
 
-function toMinutes(time: string): number {
+/** "HH:MM" 转当日分钟数。非法输入按 0 处理 */
+export function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number)
   if (!Number.isFinite(h) || !Number.isFinite(m)) return 0
   return h * 60 + m
@@ -19,14 +20,14 @@ function toMinutes(time: string): number {
  * 确有夜班需求时应引入显式的「跨天」标记，而不是靠时间大小推断。
  */
 export function calcHours(clockIn: string, clockOut: string): number {
-  const start = toMinutes(clockIn)
-  const end = toMinutes(clockOut)
+  const start = timeToMinutes(clockIn)
+  const end = timeToMinutes(clockOut)
   let minutes = end - start
   if (minutes <= 0) return 0
 
   const lunchHours = getLunchBreakHours()
   if (lunchHours > 0) {
-    const lunchStart = toMinutes(getLunchStart())
+    const lunchStart = timeToMinutes(getLunchStart())
     const lunchEnd = lunchStart + Math.round(lunchHours * 60)
     // 只扣除与午休真正重叠的部分：只上上午或只上下午的不会被扣
     const overlap = Math.min(end, lunchEnd) - Math.max(start, lunchStart)
@@ -43,7 +44,7 @@ export function formatHours(clockIn: string, clockOut: string): string {
 /** 下班时间不晚于上班时间，属于无效区间（保存时应提示用户） */
 export function isInvalidTimeRange(clockIn?: string, clockOut?: string): boolean {
   if (!clockIn || !clockOut) return false
-  return toMinutes(clockOut) <= toMinutes(clockIn)
+  return timeToMinutes(clockOut) <= timeToMinutes(clockIn)
 }
 
 /**

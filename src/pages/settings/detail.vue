@@ -3,6 +3,7 @@
     <LeaveSetting v-if="currentType === 'leave'" />
     <CalendarSetting v-else-if="currentType === 'calendar'" />
     <HoursSetting v-else-if="currentType === 'hours'" />
+    <AutoClockSetting v-else-if="currentType === 'autoclock'" />
   </view>
 </template>
 
@@ -12,6 +13,7 @@
   import LeaveSetting from './components/LeaveSetting.vue'
   import CalendarSetting from './components/CalendarSetting.vue'
   import HoursSetting from './components/HoursSetting.vue'
+  import AutoClockSetting from './components/AutoClockSetting.vue'
 
   const currentType = ref('')
 
@@ -19,6 +21,7 @@
     leave: '按钮设置',
     calendar: '日历设置',
     hours: '午休扣除',
+    autoclock: '自动打卡',
   }
 
   onLoad((query?: Record<string, string>) => {

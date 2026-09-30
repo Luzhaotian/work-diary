@@ -159,6 +159,7 @@
   import { calcMonthlyStats } from '@/utils/stats'
   import { getUniEventValue } from '@/types/event'
   import { useClockForm, DEFAULT_CLOCK_IN, DEFAULT_CLOCK_OUT } from '@/composables/useClockForm'
+  import { lastAutoClockMessage } from '@/composables/useAutoClock'
   import { PRIMARY_COLOR } from '@/utils/theme'
 
   const form = useClockForm()
@@ -306,6 +307,12 @@
   onShow(() => {
     refreshData()
     showGuide.value = !getGuideCompleted()
+    // 自动打卡（进入补卡/到点打卡）的提示只展示一次
+    const msg = lastAutoClockMessage.value
+    if (msg) {
+      lastAutoClockMessage.value = ''
+      uni.showToast({ title: msg, icon: 'none', duration: 2500 })
+    }
   })
 </script>
 
