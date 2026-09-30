@@ -1,0 +1,103 @@
+// 设置页共享样式（mixin 形式）。
+//
+// 这些类名此前在 settings.vue / LeaveSetting / HoursSetting / CalendarSetting
+// 四个文件里各写一遍（.cell 重复 4 次、.group/.group-title 4 次……）。
+// 抽到这里做单一事实来源：改一处，四个页面同步生效。
+//
+// mixin 刻意拆得较细（group-block / group-desc / cell-base / cell-nav / option-card），
+// 这样每个组件只 @include 自己模板真正用到的类。若做成一个"全家桶"mixin，
+// 会给不用 .group-desc 的 settings.vue、不用 .cell-value 的 LeaveSetting
+// 输出无用 CSS —— 那与本次清理死代码的目标相悖。
+//
+// 只收录「逐字一致」的类；各文件有差异的类（如 CalendarSetting 的 .option
+// 带 gap:24rpx、.option-label 带 display:block、.option-check 带 flex-shrink:0）
+// 仍保留在各自组件里，避免合并改变外观。
+//
+// 用法：
+//   @use '@/styles/settings.scss' as st;
+//   @include st.group-block;
+//   @include st.cell-base;
+
+@use '@/styles/variables.scss' as *;
+
+/// 分组容器与小标题（.group / .group-title）
+@mixin group-block {
+  .group {
+    margin-bottom: 32rpx;
+  }
+
+  .group-title {
+    font-size: 24rpx;
+    color: $gray-400;
+    padding: 0 8rpx 12rpx;
+    display: block;
+  }
+}
+
+/// 分组说明文字。
+/// 统一带 line-height:1.5 —— 这是本次唯一的视觉变化：
+/// HoursSetting / CalendarSetting 原本就有 1.5，LeaveSetting 原本没有
+/// （detail.vue 用 v-if 一次只渲染一个子组件，各页样式互不影响）。
+/// 三个设置子页的说明文本从此行高一致；LeaveSetting 的说明是会换行的长句，
+/// 1.5 行高只会更易读，属于有意的一致性改进，非回归。
+@mixin group-desc {
+  .group-desc {
+    font-size: 22rpx;
+    color: $gray-400;
+    padding: 12rpx 8rpx 0;
+    display: block;
+    line-height: 1.5;
+  }
+}
+
+/// 单元格行本体（.cell / .cell-label）。所有设置页都用得到。
+@mixin cell-base {
+  .cell {
+    background: #fff;
+    border-radius: $radius;
+    padding: 28rpx 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cell-label {
+    font-size: 30rpx;
+    color: $gray-900;
+  }
+}
+
+/// 单元格右侧导航（值 + 箭头）。仅带「›」跳转的 cell 需要。
+@mixin cell-nav {
+  .cell-right {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  .cell-value {
+    font-size: 26rpx;
+    color: $gray-400;
+  }
+
+  .cell-arrow {
+    font-size: 32rpx;
+    color: $gray-200;
+    font-weight: 300;
+  }
+}
+
+/// 可选项卡片容器（.card + 分隔线）。
+/// .option / .option-label / .option-check 因 Hours 与 Calendar 存在差异，
+/// 未收录，留在各组件内。
+@mixin option-card {
+  .card {
+    background: #fff;
+    border-radius: $radius;
+    overflow: hidden;
+  }
+
+  .option-border {
+    border-top: 1rpx solid $gray-100;
+  }
+}

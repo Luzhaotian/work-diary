@@ -82,32 +82,45 @@ npm run type-check
 ```
 src/
 ├── pages/
-│   ├── index/       # 首页 - 打卡记录
-│   ├── record/      # 历史记录
-│   ├── calendar/    # 日历视图
-│   ├── stats/       # 工时统计
-│   └── settings/    # 设置
+│   ├── index/       # 首页 - 打卡记录（tabBar）
+│   ├── record/      # 历史记录（tabBar，右下角 FAB 进入工时统计）
+│   ├── calendar/    # 日历视图（tabBar）
+│   ├── stats/       # 工时统计（非 tabBar，从历史页 FAB 进入）
+│   └── settings/    # 设置（tabBar）
 │       ├── components/  # 设置子组件
-│       │   ├── LeaveSetting.vue    # 请假功能设置
-│       │   └── CalendarSetting.vue # 日历设置
-│       ├── detail.vue       # 设置详情页
+│       │   ├── LeaveSetting.vue     # 请假功能设置
+│       │   ├── CalendarSetting.vue  # 日历设置（休息制度 / 法定节假日）
+│       │   └── HoursSetting.vue     # 午休扣除设置
+│       ├── detail.vue       # 设置详情页（按 ?type= 渲染对应子组件）
 │       └── settings.vue     # 设置主页
 ├── components/      # 公共组件
-│   └── ClockDisplay.vue   # 时钟显示组件
+│   ├── ClockDisplay.vue   # 时钟显示
+│   ├── ClockEditForm.vue  # 打卡编辑表单（首页/历史/日历共用）
+│   └── GuideOverlay.vue   # 首次引导蒙层
 ├── composables/     # 组合式函数
-│   └── useClockForm.ts    # 打卡表单逻辑
+│   └── useClockForm.ts    # 打卡表单状态与事件逻辑
 ├── types/           # TypeScript 类型定义
-│   ├── clock.ts
-│   └── event.ts       # uni-app 事件类型
+│   ├── clock.ts     # ClockRecord / MonthlyStats / ClockFormController
+│   └── event.ts     # uni-app 事件类型
 ├── utils/           # 工具函数
-│   ├── storage.ts   # 本地数据存储
-│   ├── time.ts      # 时间计算工具
-│   ├── date.ts      # 日期工具
-│   ├── stats.ts     # 统计计算工具
-│   └── workday.ts   # 工作日判断
+│   ├── storage.ts   # 本地数据存储（记录 + 各项设置，含模块级缓存）
+│   ├── time.ts      # 时间/工时计算
+│   ├── date.ts      # 日期工具（本地时区安全解析）
+│   ├── stats.ts     # 月度统计计算
+│   ├── workday.ts   # 工作日判断（休息制度 × 法定节假日）
+│   └── theme.ts     # 主题色常量（组件属性/JS 用，与 $blue 同源）
 ├── styles/          # 全局样式
-│   └── variables.scss  # 样式变量
+│   ├── variables.scss  # 样式变量
+│   └── settings.scss   # 设置页共享样式（mixin）
 └── static/          # 静态资源
+    └── tabs/        # tabBar 图标（4 图标 × 常态/激活态 = 8 张 PNG）
+```
+
+tabBar 图标由 `scripts/generate-tab-icons.py` 程序化生成（Pillow 超采样绘制），
+配色取自 `pages.json` 的 `color` / `selectedColor`。改主题色后重跑该脚本即可重新生成：
+
+```bash
+python3 scripts/generate-tab-icons.py
 ```
 
 ## 许可证

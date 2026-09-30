@@ -102,48 +102,7 @@
       </view>
 
       <view v-else class="detail-form">
-        <view class="form-row">
-          <text class="form-label"> 上班时间 </text>
-          <picker mode="time" :value="editClockIn" @change="onClockInChange">
-            <view class="form-picker">
-              <text class="form-picker-text">
-                {{ editClockIn || '09:00' }}
-              </text>
-            </view>
-          </picker>
-        </view>
-
-        <view class="form-row">
-          <text class="form-label"> 下班时间 </text>
-          <picker mode="time" :value="editClockOut" @change="onClockOutChange">
-            <view class="form-picker">
-              <text class="form-picker-text">
-                {{ editClockOut || '18:00' }}
-              </text>
-            </view>
-          </picker>
-        </view>
-
-        <view v-if="showLeave" class="form-row">
-          <text class="form-label"> 请假 </text>
-          <switch :checked="editIsLeave" color="#2563EB" @change="onLeaveChange" />
-        </view>
-
-        <view v-if="showLeave && editIsLeave" class="form-row">
-          <text class="form-label"> 类型 </text>
-          <picker :range="LEAVE_TYPES" :range-key="'label'" @change="onLeaveTypeChange">
-            <view class="form-picker">
-              <text class="form-picker-text">
-                {{ editLeaveType === 'half' ? '半天' : '全天' }}
-              </text>
-            </view>
-          </picker>
-        </view>
-
-        <view v-if="editClockIn && editClockOut && !editIsLeave" class="form-row hours-row">
-          <text class="form-label"> 工时 </text>
-          <text class="hours-value"> {{ formatHours(editClockIn, editClockOut) }}h </text>
-        </view>
+        <ClockEditForm :form="form" :show-leave="showLeave" />
 
         <view class="btn-row">
           <button class="btn btn-primary" @tap="saveRecord">保存</button>
@@ -159,17 +118,17 @@
 <script setup lang="ts">
   import { ref, computed, nextTick } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
+  import ClockEditForm from '@/components/ClockEditForm.vue'
   import type { ClockRecord } from '@/types/clock'
   import {
     getRecordsByMonth,
-    addRecord,
-    updateRecord,
     deleteRecord,
-    generateId,
     getShowLeave,
+    upsertRecordByDate,
+    generateId,
+    getMonthKey,
   } from '@/utils/storage'
   import { isHolidayFromLib, getFestivalName, isRestWeekend } from '@/utils/workday'
-  import { formatHours, LEAVE_TYPES } from '@/utils/time'
   import {
     getLocalDateStr,
     prevMonth as getPrevMonth,
@@ -177,23 +136,18 @@
     formatWeekday,
   } from '@/utils/date'
   import { useClockForm } from '@/composables/useClockForm'
+  import { CONFIRM_COLOR } from '@/utils/theme'
 
-  const {
-    clockIn: editClockIn,
-    clockOut: editClockOut,
-    isLeave: editIsLeave,
-    leaveType: editLeaveType,
-    onClockInChange,
-    onClockOutChange,
-    onLeaveChange,
-    onLeaveTypeChange,
-    loadFromRecord,
-  } = useClockForm()
+  const form = useClockForm()
+  const { loadFromRecord } = form
 
   const weekdays = ['一', '二', '三', '四', '五', '六', '日']
-  const now = new Date()
-  const year = ref(now.getFullYear())
-  const month = ref(now.getMonth() + 1)
+  // 初始月份用打开时的日期；后续所有「今天」相关逻辑都重新取 new Date()，
+  // 不再依赖这个在 setup 里冻结的快照（tabBar 页面常驻不重建，
+  // 冻结的 now 会让应用跨月后「今天」按钮跳回旧月份）。
+  const initialNow = new Date()
+  const year = ref(initialNow.getFullYear())
+  const month = ref(initialNow.getMonth() + 1)
   const records = ref<ClockRecord[]>([])
   const selectedDay = ref<CalendarCell | null>(null)
   const showLeave = ref(true)
@@ -226,6 +180,7 @@
     startWeekday = startWeekday === 0 ? 7 : startWeekday
     const daysInMonth = new Date(year.value, month.value, 0).getDate()
     const todayStr = getLocalDateStr()
+    const monthPrefix = getMonthKey(year.value, month.value)
 
     const cells: CalendarCell[] = []
 
@@ -244,18 +199,21 @@
       })
     }
 
+    // 按日期建索引，避免每天在数组里 find（30 天 × 30 条 = 900 次比较）
+    const recordByDate = new Map<string, ClockRecord>()
+    for (const r of records.value) recordByDate.set(r.date, r)
+
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year.value}-${String(month.value).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      const dateObj = new Date(year.value, month.value - 1, d)
+      const dateStr = `${monthPrefix}-${String(d).padStart(2, '0')}`
       const isHol = isHolidayFromLib(dateStr)
       const hName = getFestivalName(dateStr)
-      const record = records.value.find((r) => r.date === dateStr)
+      const record = recordByDate.get(dateStr)
       const isActualWeekend = isRestWeekend(dateStr)
 
       cells.push({
         day: d,
         fullDate: dateStr,
-        weekday: formatWeekday(dateObj, 'full'),
+        weekday: formatWeekday(dateStr, 'full'),
         isToday: dateStr === todayStr,
         isWeekend: isActualWeekend,
         isHoliday: isHol,
@@ -290,8 +248,11 @@
   }
 
   function goToday() {
-    year.value = now.getFullYear()
-    month.value = now.getMonth() + 1
+    // 每次重新取当前日期：此前用的是 setup 里冻结的 now，
+    // 应用跨月后点「今天」会跳回旧月份
+    const today = new Date()
+    year.value = today.getFullYear()
+    month.value = today.getMonth() + 1
     selectedDay.value = null
     loadRecords()
     selectToday()
@@ -312,32 +273,37 @@
       clockIn: cell.clockIn,
       clockOut: cell.clockOut,
       isLeave: cell.isLeave,
-      leaveType: cell.leaveType as 'full' | 'half' | undefined,
+      leaveType: cell.leaveType === 'half' ? 'half' : 'full',
     })
   }
 
   function saveRecord() {
     if (!selectedDay.value) return
+    if (form.invalidTimeRange.value) {
+      uni.showToast({ title: '下班时间早于上班时间', icon: 'none' })
+      return
+    }
+
     const dateStr = selectedDay.value.fullDate
     const existing = records.value.find((r) => r.date === dateStr)
+    const fields = form.toRecordFields()
 
-    if (existing) {
-      existing.clockIn = editClockIn.value
-      existing.clockOut = editClockOut.value
-      existing.isLeave = editIsLeave.value
-      existing.leaveType = editIsLeave.value ? editLeaveType.value : undefined
-      updateRecord(existing)
-    } else {
-      const rec: ClockRecord = {
-        id: generateId(),
-        date: dateStr,
-        clockIn: editClockIn.value,
-        clockOut: editClockOut.value,
-        isLeave: editIsLeave.value,
-        leaveType: editIsLeave.value ? editLeaveType.value : undefined,
-      }
-      addRecord(rec)
+    // 什么都没填（无上下班时间、也没请假）就不要建记录，
+    // 否则会造出一条既不打卡也不请假的空记录污染统计与日历着色
+    const isEmpty = !fields.clockIn && !fields.clockOut && !fields.isLeave
+    if (isEmpty && !existing) {
+      selectedDay.value = null
+      uni.showToast({ title: '未填写任何内容', icon: 'none' })
+      return
     }
+
+    // upsertRecordByDate 按日期查重：已有记录保留原 id 合并，
+    // 不会像旧的 addRecord 分支那样造出同日重复记录
+    upsertRecordByDate({
+      id: existing?.id ?? generateId(),
+      date: dateStr,
+      ...fields,
+    })
 
     loadRecords()
     selectedDay.value = null
@@ -349,7 +315,7 @@
     uni.showModal({
       title: '确认删除',
       content: `删除 ${selectedDay.value.fullDate} 的记录？`,
-      confirmColor: '#2563EB',
+      confirmColor: CONFIRM_COLOR,
       success(res) {
         if (res.confirm && selectedDay.value?.recordId) {
           deleteRecord(selectedDay.value.recordId)
@@ -474,15 +440,15 @@
   }
 
   .day-cell.holiday {
-    background: #fef3c7;
+    background: $orange-bg;
   }
 
   .day-cell.leave {
-    background: #fef2f2;
+    background: $red-bg;
   }
 
   .day-cell.overtime {
-    background: #f0fdf4;
+    background: $green-bg;
   }
 
   .day-cell.recorded {
@@ -527,7 +493,7 @@
   }
 
   .overtime-tag {
-    color: #16a34a;
+    color: $green-dark;
   }
 
   .rest-tag {
@@ -564,16 +530,16 @@
     border: 1rpx solid $blue;
   }
   .holiday-dot {
-    background: #fef3c7;
+    background: $orange-bg;
     border: 1rpx solid $orange;
   }
   .leave-dot {
-    background: #fef2f2;
+    background: $red-bg;
     border: 1rpx solid $red;
   }
   .overtime-dot {
-    background: #f0fdf4;
-    border: 1rpx solid #16a34a;
+    background: $green-bg;
+    border: 1rpx solid $green-dark;
   }
   .weekend-dot {
     background: $gray-50;
@@ -616,15 +582,15 @@
   .detail-holiday {
     font-size: 22rpx;
     color: $orange;
-    background: #fef3c7;
+    background: $orange-bg;
     padding: 4rpx 12rpx;
     border-radius: 8rpx;
   }
 
   .detail-overtime {
     font-size: 22rpx;
-    color: #16a34a;
-    background: #f0fdf4;
+    color: $green-dark;
+    background: $green-bg;
     padding: 4rpx 12rpx;
     border-radius: 8rpx;
   }
@@ -702,7 +668,7 @@
   }
 
   .btn-danger {
-    background: #fef2f2;
+    background: $red-bg;
     color: $red;
   }
 </style>

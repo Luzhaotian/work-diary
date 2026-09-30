@@ -33,7 +33,7 @@
         class="chart-swiper"
         :indicator-dots="chartPages.length > 1"
         indicator-color="rgba(0,0,0,0.15)"
-        indicator-active-color="#2563EB"
+        :indicator-active-color="PRIMARY_COLOR"
         @change="onChartPageChange"
       >
         <swiper-item v-for="(page, pi) in chartPages" :key="pi">
@@ -139,7 +139,8 @@
   import { onShow } from '@dcloudio/uni-app'
   import type { MonthlyStats } from '@/types/clock'
   import { prevMonth } from '@/utils/date'
-  import { calcMonthlyStats } from '@/utils/stats'
+  import { calcStatsForMonths, hasAnyData } from '@/utils/stats'
+  import { PRIMARY_COLOR } from '@/utils/theme'
 
   type Range = '3m' | '6m' | '1y' | '5y' | 'all'
 
@@ -175,6 +176,17 @@
 
   const rangeLabel = computed(() => rangeLabels[range.value])
 
+  /**
+   * 有数据的月份（新→旧）。
+   *
+   * loadStats 会按所选区间生成全部月份（「全部」= 120 个月），
+   * 其中绝大多数是用户从没打过卡的空白月。这些月份既不该出现在明细里
+   * 刷屏（120 张全 0 卡片），也不该计入汇总——否则「总应出勤」会把
+   * 120 个月全加起来（实测 2640 天 vs 实际出勤 60 天），数字严重虚高。
+   * 因此明细、图表、汇总统一基于这个过滤后的列表，三项口径一致。
+   */
+  const statsWithData = computed(() => monthlyStats.value.filter(hasAnyData))
+
   interface ChartItem {
     key: string
     label: string
@@ -182,9 +194,11 @@
   }
 
   const chartItems = computed<ChartItem[]>(() => {
-    if (monthlyStats.value.length > 60) {
+    const source = statsWithData.value
+    // 超过 60 个月时按月画柱子太密，改为按年聚合
+    if (source.length > 60) {
       const yearMap = new Map<number, { totalHours: number; totalDays: number }>()
-      for (const s of monthlyStats.value) {
+      for (const s of source) {
         const entry = yearMap.get(s.year) || { totalHours: 0, totalDays: 0 }
         entry.totalHours += s.totalHours
         entry.totalDays += s.actualWorkDays
@@ -198,14 +212,11 @@
           averageHours: v.totalDays > 0 ? parseFloat((v.totalHours / v.totalDays).toFixed(1)) : 0,
         }))
     }
-    return monthlyStats.value
-      .slice()
-      .sort((a, b) => b.year - a.year || b.month - a.month)
-      .map((s) => ({
-        key: `${s.year}-${s.month}`,
-        label: `${s.month}月`,
-        averageHours: s.averageHours,
-      }))
+    return source.map((s) => ({
+      key: `${s.year}-${s.month}`,
+      label: `${s.month}月`,
+      averageHours: s.averageHours,
+    }))
   })
 
   const CHART_PAGE_SIZE = 12
@@ -223,14 +234,21 @@
     chartPageIndex.value = e.detail.current
   }
 
-  const visibleMonthlyStats = computed(() => {
-    return monthlyStats.value
-      .slice(0, detailPage.value * detailPageSize)
-      .sort((a, b) => b.year - a.year || b.month - a.month)
-  })
+  /**
+   * 月度明细分页。
+   * 先排序再切片：此前是 slice().sort()，结果正确只是因为 loadStats
+   * 恰好按「新→旧」生成数组，顺序一变就会切错月份。
+   */
+  const sortedStatsWithData = computed(() =>
+    statsWithData.value.slice().sort((a, b) => b.year - a.year || b.month - a.month),
+  )
+
+  const visibleMonthlyStats = computed(() =>
+    sortedStatsWithData.value.slice(0, detailPage.value * detailPageSize),
+  )
 
   const hasMoreMonths = computed(() => {
-    return visibleMonthlyStats.value.length < monthlyStats.value.length
+    return visibleMonthlyStats.value.length < sortedStatsWithData.value.length
   })
 
   function loadMoreMonths() {
@@ -242,14 +260,17 @@
     const now = new Date()
     let y = now.getFullYear()
     let m = now.getMonth() + 1
-    const stats: MonthlyStats[] = []
+    const list: { year: number; month: number }[] = []
     for (let i = 0; i < months; i++) {
-      stats.push(calcMonthlyStats(y, m))
+      list.push({ year: y, month: m })
       const prev = prevMonth(y, m)
       y = prev.year
       m = prev.month
     }
-    monthlyStats.value = stats
+    // 批量计算：只读一次全量记录并按月分组。
+    // 此前逐月调用 calcMonthlyStats，每月都全量读取+JSON.parse 一遍记录，
+    // 选「全部」(120 个月) 实测产生 6267 次同步 storage 读取、120 次全量解析（7.7MB）。
+    monthlyStats.value = calcStatsForMonths(list)
     detailPage.value = 1
     chartPageIndex.value = 0
   }
@@ -259,24 +280,24 @@
     loadStats()
   }
 
+  /** 汇总只累加有数据的月份，与明细、图表口径一致 */
   const summary = computed(() => {
-    let workDays = 0,
-      actualDays = 0,
-      leaveDays = 0,
-      totalHours = 0,
-      totalActual = 0
-    for (const s of monthlyStats.value) {
+    let workDays = 0
+    let actualDays = 0
+    let leaveDays = 0
+    let totalHours = 0
+    for (const s of statsWithData.value) {
       workDays += s.totalWorkDays
       actualDays += s.actualWorkDays
       leaveDays += s.leaveDays
       totalHours += s.totalHours
-      totalActual += s.actualWorkDays
     }
     return {
       workDays,
       actualDays,
-      leaveDays,
-      avgHours: totalActual > 0 ? (totalHours / totalActual).toFixed(1) : '0.0',
+      // 0.5 的半天假累加有浮点误差，收敛到一位小数
+      leaveDays: parseFloat(leaveDays.toFixed(1)),
+      avgHours: actualDays > 0 ? (totalHours / actualDays).toFixed(1) : '0.0',
     }
   })
 

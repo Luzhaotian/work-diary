@@ -8,9 +8,6 @@
       <view class="month-btn" @tap="handleNextMonth">
         <text class="month-arrow"> › </text>
       </view>
-      <!-- <view class="import-btn" @tap="handleImport">
-        <text class="import-icon"> ⬆ </text>
-      </view> -->
       <view class="export-btn" @tap="handleExport">
         <text class="export-icon"> ⬇ </text>
       </view>
@@ -32,7 +29,12 @@
               {{ record.leaveType === 'half' ? '半天假' : '全天假' }}
             </text>
           </view>
-          <view v-else class="record-times">
+          <!--
+            全天假：整天没上班，遮掉打卡时间。
+            半天假 / 普通日：打卡时间真实，照常展示（半天假仍上了另外半天）。
+            showLeave 关闭时无请假语义，一律展示时间。
+          -->
+          <view v-if="!(showLeave && isFullDayLeave(record))" class="record-times">
             <view class="record-time-item">
               <text class="rt-label"> 上班 </text>
               <text class="rt-value">
@@ -45,9 +47,9 @@
                 {{ record.clockOut || '--:--' }}
               </text>
             </view>
-            <view v-if="record.clockIn && record.clockOut" class="record-time-item">
+            <view v-if="hoursOf(record)" class="record-time-item">
               <text class="rt-label"> 工时 </text>
-              <text class="rt-value hl"> {{ formatHours(record.clockIn, record.clockOut) }}h </text>
+              <text class="rt-value hl"> {{ hoursOf(record) }} </text>
             </view>
           </view>
         </view>
@@ -71,50 +73,19 @@
       <text class="fab-icon"> 📊 </text>
     </view>
 
-    <view v-if="showModal" class="modal-mask" @tap="showModal = false" />
+    <view v-if="showModal" class="modal-mask" @tap="closeModal" />
     <view v-if="showModal" class="modal-box">
       <text class="modal-title"> 修改记录 </text>
 
-      <view class="form-row">
-        <text class="form-label"> 上班时间 </text>
-        <picker mode="time" :value="clockIn" @change="onClockInChange">
-          <view class="form-picker">
-            <text class="form-picker-text">
-              {{ clockIn || '请选择' }}
-            </text>
-          </view>
-        </picker>
-      </view>
-
-      <view class="form-row">
-        <text class="form-label"> 下班时间 </text>
-        <picker mode="time" :value="clockOut" @change="onClockOutChange">
-          <view class="form-picker">
-            <text class="form-picker-text">
-              {{ clockOut || '请选择' }}
-            </text>
-          </view>
-        </picker>
-      </view>
-
-      <view v-if="showLeave" class="form-row">
-        <text class="form-label"> 请假 </text>
-        <switch :checked="isLeave" color="#2563EB" @change="onLeaveChange" />
-      </view>
-
-      <view v-if="showLeave && isLeave" class="form-row">
-        <text class="form-label"> 类型 </text>
-        <picker :range="leaveTypeOptions" :range-key="'label'" @change="onLeaveTypeChange">
-          <view class="form-picker">
-            <text class="form-picker-text">
-              {{ leaveType === 'half' ? '半天' : '全天' }}
-            </text>
-          </view>
-        </picker>
-      </view>
+      <ClockEditForm
+        :form="form"
+        :show-leave="showLeave"
+        placeholder-in="请选择"
+        placeholder-out="请选择"
+      />
 
       <view class="modal-btns">
-        <button class="m-btn m-cancel" @tap="showModal = false">取消</button>
+        <button class="m-btn m-cancel" @tap="closeModal">取消</button>
         <button class="m-btn m-save" @tap="saveEdit">保存</button>
       </view>
     </view>
@@ -124,39 +95,35 @@
 <script setup lang="ts">
   import { ref } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
+  import ClockEditForm from '@/components/ClockEditForm.vue'
   import type { ClockRecord } from '@/types/clock'
   import {
     getRecordsByMonth,
-    updateRecord,
     deleteRecord,
     getShowLeave,
-    // getRecords,
-    // saveRecords,
-    // generateId,
+    upsertRecordByDate,
   } from '@/utils/storage'
-  import { formatHours, LEAVE_TYPES } from '@/utils/time'
+  import { formatEffectiveHours, isFullDayLeave } from '@/utils/time'
   import { formatDay, formatWeekday, prevMonth, nextMonth } from '@/utils/date'
   import { useClockForm } from '@/composables/useClockForm'
+  import { CONFIRM_COLOR } from '@/utils/theme'
 
   const currentYear = ref(new Date().getFullYear())
   const currentMonth = ref(new Date().getMonth() + 1)
   const records = ref<ClockRecord[]>([])
   const showModal = ref(false)
   const showLeave = ref(true)
-  const editingRecordId = ref('')
-  const leaveTypeOptions = LEAVE_TYPES
+  const editingRecord = ref<ClockRecord | null>(null)
 
-  const {
-    clockIn,
-    clockOut,
-    isLeave,
-    leaveType,
-    onClockInChange,
-    onClockOutChange,
-    onLeaveChange,
-    onLeaveTypeChange,
-    loadFromRecord,
-  } = useClockForm()
+  const form = useClockForm()
+
+  /**
+   * 列表工时展示。走 formatEffectiveHours（与导出、统计同一口径），
+   * 请假当天返回空串，不再渲染工时项。
+   */
+  function hoursOf(r: ClockRecord): string {
+    return formatEffectiveHours(r, '')
+  }
 
   function loadRecords() {
     showLeave.value = getShowLeave()
@@ -180,16 +147,22 @@
   }
 
   function editRecord(r: ClockRecord) {
-    editingRecordId.value = r.id
-    loadFromRecord(r)
+    // 持有整条记录：保存时基于它展开，不再先构造 date: '' 再回填
+    editingRecord.value = r
+    form.loadFromRecord(r)
     showModal.value = true
+  }
+
+  function closeModal() {
+    showModal.value = false
+    editingRecord.value = null
   }
 
   function confirmDelete(r: ClockRecord) {
     uni.showModal({
       title: '确认删除',
       content: `删除 ${r.date} 的记录？`,
-      confirmColor: '#2563EB',
+      confirmColor: CONFIRM_COLOR,
       success(res) {
         if (res.confirm) {
           deleteRecord(r.id)
@@ -201,19 +174,22 @@
   }
 
   function saveEdit() {
-    const rec: ClockRecord = {
-      id: editingRecordId.value,
-      date: '',
-      clockIn: clockIn.value,
-      clockOut: clockOut.value,
-      isLeave: isLeave.value,
-      leaveType: isLeave.value ? leaveType.value : undefined,
+    const original = editingRecord.value
+    if (!original) {
+      closeModal()
+      return
     }
-    // preserve original date from existing record
-    const original = records.value.find((r) => r.id === editingRecordId.value)
-    if (original) rec.date = original.date
-    updateRecord(rec)
-    showModal.value = false
+    if (form.invalidTimeRange.value) {
+      uni.showToast({ title: '下班时间早于上班时间', icon: 'none' })
+      return
+    }
+
+    // 基于原记录展开、只覆盖表单字段。
+    // toRecordFields() 对未填写项返回 undefined，因此不会像旧实现那样
+    // 把 picker 的默认值（09:00/18:00）当成真实打卡时间写进去
+    // ——此前只打了上班卡的记录，点编辑再保存会凭空多出 18:00 下班、算出 9 小时。
+    upsertRecordByDate({ ...original, ...form.toRecordFields() })
+    closeModal()
     loadRecords()
     uni.showToast({ title: '已保存', icon: 'success' })
   }
@@ -226,45 +202,60 @@
     uni.navigateTo({ url: '/pages/stats/stats' })
   }
 
+  /**
+   * 生成两种导出内容。
+   *
+   * 口径与列表、统计完全一致（都基于 effectiveHours / isFullDayLeave）：
+   * - 全天假：打卡时间遮成 --:-- / 空，工时不计
+   * - 半天假：保留真实打卡时间，工时照常计算（当天上了另外半天）
+   * 此前「导出为文件」未判断请假，全天假会导出 9.0 小时，
+   * 而「复制文本」判断了导出 0h——同一份数据两种口径。
+   */
+  function buildExportContent(): { fileContent: string; clipboardContent: string } {
+    const fileHeader = '日期\t上班\t下班\t工时(h)\t请假\t请假类型'
+    const fileRows = records.value.map((r) => {
+      const fullLeave = isFullDayLeave(r)
+      // 纯数字工时，便于在 Excel 里直接求和
+      const hours = formatEffectiveHours(r, '').replace('h', '')
+      const clockIn = fullLeave ? '' : r.clockIn || ''
+      const clockOut = fullLeave ? '' : r.clockOut || ''
+      const leave = r.isLeave ? '是' : '否'
+      const leaveTypeText = r.isLeave ? (r.leaveType === 'half' ? '半天' : '全天') : ''
+      return [r.date, clockIn, clockOut, hours, leave, leaveTypeText].join('\t')
+    })
+
+    const clipHeader = '日期\t上班\t下班\t工时\t请假'
+    const clipRows = records.value.map((r) => {
+      const fullLeave = isFullDayLeave(r)
+      const leave = r.isLeave ? (r.leaveType === 'half' ? '半天假' : '全天假') : ''
+      const clockIn = fullLeave ? '--:--' : r.clockIn || '--:--'
+      const clockOut = fullLeave ? '--:--' : r.clockOut || '--:--'
+      return [r.date, clockIn, clockOut, formatEffectiveHours(r), leave].join('\t')
+    })
+
+    return {
+      fileContent: [fileHeader, ...fileRows].join('\n'),
+      clipboardContent: [clipHeader, ...clipRows].join('\n'),
+    }
+  }
+
   function handleExport() {
     if (records.value.length === 0) {
       uni.showToast({ title: '暂无记录', icon: 'none' })
       return
     }
 
-    const header = '日期\t上班\t下班\t工时(h)\t请假\t请假类型'
-    const rows = records.value.map((r) => {
-      const hours = r.clockIn && r.clockOut ? formatHours(r.clockIn, r.clockOut) : ''
-      const leave = r.isLeave ? '是' : '否'
-      const leaveType = r.isLeave ? (r.leaveType === 'half' ? '半天' : '全天') : ''
-      return [r.date, r.clockIn || '', r.clockOut || '', hours, leave, leaveType].join('\t')
-    })
-    const tsvContent = [header, ...rows].join('\n')
-
-    const textHeader = '日期\t上班\t下班\t工时\t请假'
-    const textRows = records.value.map((r) => {
-      const leave = r.isLeave ? (r.leaveType === 'half' ? '半天假' : '全天假') : ''
-      const clockIn = r.isLeave ? '--:--' : r.clockIn || '--:--'
-      const clockOut = r.isLeave ? '--:--' : r.clockOut || '--:--'
-      const hours = r.isLeave
-        ? '0h'
-        : r.clockIn && r.clockOut
-          ? formatHours(r.clockIn, r.clockOut) + 'h'
-          : '0h'
-      return [r.date, clockIn, clockOut, hours, leave].join('\t')
-    })
-    const textContent = [textHeader, ...textRows].join('\n')
-
+    const { fileContent, clipboardContent } = buildExportContent()
     const fileName = `打卡记录_${currentYear.value}_${String(currentMonth.value).padStart(2, '0')}.csv`
 
     uni.showActionSheet({
       itemList: ['导出为文件', '复制文本'],
       success(res) {
         if (res.tapIndex === 0) {
-          exportAsFile(tsvContent, fileName)
+          exportAsFile(fileContent, fileName)
         } else {
           uni.setClipboardData({
-            data: textContent,
+            data: clipboardContent,
             success() {
               uni.showToast({ title: '已复制', icon: 'success' })
             },
@@ -274,12 +265,33 @@
     })
   }
 
+  /** BOM 让 Excel 正确识别 UTF-8 中文 */
+  const BOM = '﻿'
+
+  /**
+   * 微信小程序的用户目录。
+   * `wx` 只在小程序运行时存在，@dcloudio/types 未声明它，
+   * 通过 globalThis 取值并显式标注类型，避免 @ts-expect-error 掩盖真实类型错误。
+   */
+  function getWxUserDataPath(): string {
+    const wxGlobal = (globalThis as { wx?: { env?: { USER_DATA_PATH?: string } } }).wx
+    return wxGlobal?.env?.USER_DATA_PATH ?? ''
+  }
+
   function exportAsFile(content: string, fileName: string) {
+    // #ifdef MP-WEIXIN
+    // 文件系统与分享文件能力仅微信小程序具备。
+    // 此前没有条件编译，H5 端会在 `wx.env` 处抛未捕获的 ReferenceError
+    // （try/catch 从下一行才开始），点「导出为文件」直接报错。
+    const userDataPath = getWxUserDataPath()
+    if (!userDataPath) {
+      fallbackCopy(content)
+      return
+    }
     const fs = uni.getFileSystemManager()
-    // @ts-expect-error wx.env only exists in WeChat MP
-    const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`
+    const filePath = `${userDataPath}/${fileName}`
     try {
-      fs.writeFileSync(filePath, '\uFEFF' + content, 'utf8')
+      fs.writeFileSync(filePath, BOM + content, 'utf8')
     } catch {
       uni.showToast({ title: '写入文件失败', icon: 'none' })
       return
@@ -303,6 +315,33 @@
         })
       },
     })
+    // #endif
+
+    // #ifndef MP-WEIXIN
+    // H5：用 Blob 触发浏览器下载；其余端退化为复制到剪贴板
+    if (
+      typeof document !== 'undefined' &&
+      typeof URL !== 'undefined' &&
+      typeof Blob !== 'undefined'
+    ) {
+      try {
+        const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        uni.showToast({ title: '已下载', icon: 'success' })
+        return
+      } catch {
+        // 落到下面的复制兜底
+      }
+    }
+    fallbackCopy(content)
+    // #endif
   }
 
   function fallbackCopy(content: string) {
@@ -313,112 +352,6 @@
       },
     })
   }
-
-  // function handleImport() {
-  //   uni.chooseMessageFile({
-  //     count: 1,
-  //     type: 'file',
-  //     extension: ['.csv', '.tsv', '.txt'],
-  //     success(res) {
-  //       const file = res.tempFiles[0]
-  //       const fs = uni.getFileSystemManager()
-  //       try {
-  //         const content = fs.readFileSync(file.path, 'utf8') as string
-  //         const parsed = parseCSVContent(content)
-  //         if (parsed.length === 0) {
-  //           uni.showToast({ title: '未识别到有效记录', icon: 'none' })
-  //           return
-  //         }
-  //         uni.showModal({
-  //           title: '导入确认',
-  //           content: `识别到 ${parsed.length} 条记录，将覆盖相同日期的已有数据，是否继续？`,
-  //           confirmColor: '#2563EB',
-  //           success(modalRes) {
-  //             if (modalRes.confirm) {
-  //               doImport(parsed)
-  //             }
-  //           },
-  //         })
-  //       } catch {
-  //         uni.showToast({ title: '读取文件失败', icon: 'none' })
-  //       }
-  //     },
-  //     fail() {
-  //       // 用户取消选择，不做提示
-  //     },
-  //   })
-  // }
-
-  // function parseCSVContent(content: string): Omit<ClockRecord, 'id'>[] {
-  //   // 去掉 BOM
-  //   const text = content.replace(/^\uFEFF/, '').trim()
-  //   const lines = text.split(/\r?\n/).filter((l) => l.trim())
-  //   if (lines.length < 2) return []
-
-  //   const header = lines[0].split(/[\t,]/)
-  //   // 查找各列索引
-  //   const dateIdx = header.findIndex((h) => h.includes('日期'))
-  //   const clockInIdx = header.findIndex((h) => h.includes('上班'))
-  //   const clockOutIdx = header.findIndex((h) => h.includes('下班'))
-  //   const leaveIdx = header.findIndex((h) => h.includes('请假') && !h.includes('类型'))
-  //   const leaveTypeIdx = header.findIndex((h) => h.includes('请假类型'))
-
-  //   if (dateIdx === -1) return []
-
-  //   const records: Omit<ClockRecord, 'id'>[] = []
-  //   for (let i = 1; i < lines.length; i++) {
-  //     const cols = lines[i].split(/[\t,]/)
-  //     const date = (cols[dateIdx] || '').trim()
-  //     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
-
-  //     let clockIn = clockInIdx !== -1 ? (cols[clockInIdx] || '').trim() : ''
-  //     let clockOut = clockOutIdx !== -1 ? (cols[clockOutIdx] || '').trim() : ''
-  //     // 过滤无效时间
-  //     if (!/^\d{2}:\d{2}$/.test(clockIn)) clockIn = ''
-  //     if (!/^\d{2}:\d{2}$/.test(clockOut)) clockOut = ''
-
-  //     const leaveVal = leaveIdx !== -1 ? (cols[leaveIdx] || '').trim() : ''
-  //     const leaveTypeVal = leaveTypeIdx !== -1 ? (cols[leaveTypeIdx] || '').trim() : ''
-  //     const isLeave = leaveVal === '是' || leaveVal.includes('假')
-  //     let leaveType: 'full' | 'half' | undefined
-  //     if (isLeave) {
-  //       leaveType = leaveTypeVal.includes('半') || leaveVal.includes('半') ? 'half' : 'full'
-  //     }
-
-  //     records.push({
-  //       date,
-  //       clockIn: clockIn || undefined,
-  //       clockOut: clockOut || undefined,
-  //       isLeave,
-  //       leaveType,
-  //     })
-  //   }
-  //   return records
-  // }
-
-  // function doImport(parsed: Omit<ClockRecord, 'id'>[]) {
-  //   const existing = getRecords()
-  //   const existingMap = new Map(existing.map((r) => [r.date, r]))
-
-  //   for (const rec of parsed) {
-  //     const old = existingMap.get(rec.date)
-  //     if (old) {
-  //       // 覆盖已有记录
-  //       old.clockIn = rec.clockIn
-  //       old.clockOut = rec.clockOut
-  //       old.isLeave = rec.isLeave
-  //       old.leaveType = rec.leaveType
-  //     } else {
-  //       const newRec: ClockRecord = { ...rec, id: generateId() }
-  //       existing.push(newRec)
-  //       existingMap.set(rec.date, newRec)
-  //     }
-  //   }
-
-  //   saveRecords(existing)
-  //   loadRecords()
-  //   uni.showToast({ title: `已导入 ${parsed.length} 条`, icon: 'success' })
-  // }
 </script>
 
 <style lang="scss">
@@ -474,23 +407,6 @@
     justify-content: center;
     position: absolute;
     right: 24rpx;
-  }
-
-  .import-btn {
-    width: 56rpx;
-    height: 56rpx;
-    border-radius: 50%;
-    background: $blue-bg;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: absolute;
-    left: 24rpx;
-  }
-
-  .import-icon {
-    font-size: 24rpx;
-    color: $blue;
   }
 
   .export-icon {
@@ -564,7 +480,7 @@
   }
 
   .leave-badge {
-    background: #fef3c7;
+    background: $orange-bg;
     padding: 8rpx 20rpx;
     border-radius: 8rpx;
     display: inline-block;
@@ -572,7 +488,7 @@
 
   .leave-text {
     font-size: 24rpx;
-    color: #d97706;
+    color: $orange-dark;
   }
 
   .record-actions {
@@ -601,7 +517,7 @@
   }
 
   .del-btn {
-    background: #fef2f2;
+    background: $red-bg;
   }
 
   .del-btn .action-icon {
@@ -655,30 +571,6 @@
     text-align: center;
     margin-bottom: 32rpx;
     display: block;
-  }
-
-  .form-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20rpx 0;
-    border-bottom: 1rpx solid $gray-100;
-  }
-
-  .form-label {
-    font-size: 28rpx;
-    color: $gray-700;
-  }
-
-  .form-picker {
-    padding: 8rpx 16rpx;
-    background: $gray-50;
-    border-radius: 8rpx;
-  }
-
-  .form-picker-text {
-    font-size: 28rpx;
-    color: $gray-900;
   }
 
   .modal-btns {

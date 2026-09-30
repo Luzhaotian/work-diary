@@ -93,7 +93,7 @@
       <text class="group-title"> 法定节假日 </text>
       <view class="cell">
         <text class="cell-label"> 遵循法定节假日 </text>
-        <switch :checked="useHolidays" color="#2563EB" @change="onToggleHolidays" />
+        <switch :checked="useHolidays" :color="PRIMARY_COLOR" @change="onToggleHolidays" />
       </view>
       <text class="group-desc">
         开启后按中国法定节假日与调休标记；关闭则为「无法定节假日」，仅按休息制度判断。
@@ -126,6 +126,7 @@
   import { getLocalDateStr } from '@/utils/date'
   import { getBiweeklyWeekType } from '@/utils/workday'
   import { getUniEventValue } from '@/types/event'
+  import { PRIMARY_COLOR } from '@/utils/theme'
 
   // v-if 延迟挂载时需在 setup 读存储
   const weekendMode = ref<WeekendMode>(getWeekendMode())
@@ -135,11 +136,15 @@
   const useHolidays = ref(getUseHolidays())
   const todayStr = getLocalDateStr()
 
-  const thisWeekType = computed(() => {
-    void anchorDate.value
-    void anchorType.value
-    return getBiweeklyWeekType(todayStr)
-  })
+  // 直接把响应式的 anchorDate / anchorType 传进去，computed 能正常追踪依赖。
+  // 此前用 `void anchorDate.value` 制造假依赖，因为 getBiweeklyWeekType 内部
+  // 读的是 storage 缓存、Vue 追踪不到——现在改成显式传参，hack 可删。
+  const thisWeekType = computed(() =>
+    getBiweeklyWeekType(todayStr, {
+      anchorDate: anchorDate.value,
+      anchorType: anchorType.value,
+    }),
+  )
   const thisWeekLabel = computed(() => (thisWeekType.value === 'big' ? '大周' : '小周'))
   const nextWeekLabel = computed(() => (thisWeekType.value === 'big' ? '小周' : '大周'))
 
@@ -200,32 +205,17 @@
 
 <style lang="scss">
   @use '@/styles/variables.scss' as *;
+  @use '@/styles/settings.scss' as st;
 
-  .group {
-    margin-bottom: 32rpx;
-  }
+  @include st.group-block;
+  @include st.group-desc;
+  @include st.option-card;
+  @include st.cell-base;
+  @include st.cell-nav;
 
-  .group-title {
-    font-size: 24rpx;
-    color: $gray-400;
-    padding: 0 8rpx 12rpx;
-    display: block;
-  }
-
-  .group-desc {
-    font-size: 22rpx;
-    color: $gray-400;
-    padding: 12rpx 8rpx 0;
-    display: block;
-    line-height: 1.5;
-  }
-
-  .card {
-    background: #fff;
-    border-radius: $radius;
-    overflow: hidden;
-  }
-
+  // 以下为 CalendarSetting 特有、或与 HoursSetting 同名但有差异的类，
+  // 故保留在组件内（.option 多 gap、.option-label 多 display:block、
+  // .option-check 多 flex-shrink，直接并入 mixin 会改变 HoursSetting 外观）
   .card-gap {
     margin-top: 16rpx;
   }
@@ -236,10 +226,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 24rpx;
-  }
-
-  .option-border {
-    border-top: 1rpx solid $gray-100;
   }
 
   .option-main {
@@ -265,37 +251,6 @@
     color: $blue;
     font-weight: 600;
     flex-shrink: 0;
-  }
-
-  .cell {
-    background: #fff;
-    border-radius: $radius;
-    padding: 28rpx 24rpx;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .cell-label {
-    font-size: 30rpx;
-    color: $gray-900;
-  }
-
-  .cell-right {
-    display: flex;
-    align-items: center;
-    gap: 8rpx;
-  }
-
-  .cell-value {
-    font-size: 26rpx;
-    color: $gray-400;
-  }
-
-  .cell-arrow {
-    font-size: 32rpx;
-    color: $gray-200;
-    font-weight: 300;
   }
 
   .quick-row {

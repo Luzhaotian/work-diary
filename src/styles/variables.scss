@@ -1,7 +1,10 @@
+// 主题色。组件属性（color="..."）与 JS 字符串用不了这里的变量，
+// 需与 utils/theme.ts 的 PRIMARY_COLOR 保持一致。
 $blue: #2563eb;
 $blue-dark: #1e40af;
 $blue-light: #3b82f6;
 $blue-bg: #eff6ff;
+
 $gray-50: #f9fafb;
 $gray-100: #f3f4f6;
 $gray-200: #e5e7eb;
@@ -9,7 +12,16 @@ $gray-400: #9ca3af;
 $gray-500: #6b7280;
 $gray-700: #374151;
 $gray-900: #111827;
+
 $red: #ef4444;
+$red-bg: #fef2f2;
+
 $orange: #f59e0b;
+$orange-dark: #d97706;
+$orange-bg: #fef3c7;
+
 $green: #10b981;
+$green-dark: #16a34a;
+$green-bg: #f0fdf4;
+
 $radius: 16rpx;

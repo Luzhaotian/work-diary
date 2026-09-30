@@ -88,7 +88,7 @@
             <text class="leave-type-btn"> {{ leaveType === 'half' ? '半天' : '全天' }} ▾ </text>
           </picker>
         </view>
-        <switch :checked="isLeaveToday" color="#2563EB" @change="toggleLeave" />
+        <switch :checked="isLeaveToday" :color="PRIMARY_COLOR" @change="toggleLeave" />
       </view>
     </view>
 
@@ -147,8 +147,7 @@
   import type { ClockRecord, MonthlyStats } from '@/types/clock'
   import {
     getTodayRecord,
-    addRecord,
-    updateRecord,
+    upsertRecordByDate,
     generateId,
     getShowLeave,
     getGuideCompleted,
@@ -159,8 +158,10 @@
   import { getLocalDateStr } from '@/utils/date'
   import { calcMonthlyStats } from '@/utils/stats'
   import { getUniEventValue } from '@/types/event'
-  import { useClockForm } from '@/composables/useClockForm'
+  import { useClockForm, DEFAULT_CLOCK_IN, DEFAULT_CLOCK_OUT } from '@/composables/useClockForm'
+  import { PRIMARY_COLOR } from '@/utils/theme'
 
+  const form = useClockForm()
   const {
     clockIn: clockInTime,
     clockOut: clockOutTime,
@@ -169,15 +170,14 @@
     onClockInChange,
     onClockOutChange,
     onLeaveTypeChange,
-  } = useClockForm()
+  } = form
 
   const todayRecord = ref<ClockRecord | undefined>()
   const showLeave = ref(true)
   const showGuide = ref(false)
-  const now = new Date()
   const monthlyStats = ref<MonthlyStats>({
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
     totalWorkDays: 0,
     actualWorkDays: 0,
     leaveDays: 0,
@@ -185,11 +185,16 @@
     averageHours: 0,
   })
 
+  /**
+   * 今日工时的展示。
+   * 走 formatEffectiveHours（与列表/导出/统计同一口径）：请假当天不计工时，
+   * 只显示上下班两端都有时间时才算出的小时数。
+   */
   const todayHours = computed(() => {
-    if (todayRecord.value?.clockIn && todayRecord.value?.clockOut) {
-      return calcHours(todayRecord.value.clockIn, todayRecord.value.clockOut).toFixed(1) + 'h'
-    }
-    return '--'
+    if (!todayRecord.value) return '--'
+    if (todayRecord.value.isLeave) return '--'
+    if (!todayRecord.value.clockIn || !todayRecord.value.clockOut) return '--'
+    return calcHours(todayRecord.value.clockIn, todayRecord.value.clockOut).toFixed(1) + 'h'
   })
 
   function dismissGuide() {
@@ -205,93 +210,96 @@
     uni.switchTab({ url: '/pages/settings/settings' })
   }
 
+  /**
+   * 统计始终基于「调用当下」的日期。
+   * 此前在 setup 里冻结 const now = new Date()，而 tabBar 页面常驻不重建，
+   * 应用跨月后首页「本月概览」会一直统计上一个月。
+   */
   function loadMonthlyStats() {
-    const y = now.getFullYear()
-    const m = now.getMonth() + 1
-    monthlyStats.value = calcMonthlyStats(y, m)
+    const now = new Date()
+    monthlyStats.value = calcMonthlyStats(now.getFullYear(), now.getMonth() + 1)
+  }
+
+  /**
+   * 写入今天的记录。
+   *
+   * 关键：日期一律取「调用当下」的 getLocalDateStr()，并复用 upsertRecordByDate
+   * 按日期查重。此前 recordClockIn/recordClockOut/toggleLeave 三处都是
+   * 「if (todayRecord.value) 就地改 date 字段」，而 todayRecord 是上次 onShow
+   * 加载的——应用保持前台跨过零点后再打卡，10/1 的卡会被写进 9/30 的记录。
+   */
+  function saveToday(fields: Partial<ClockRecord>): ClockRecord {
+    const today = getLocalDateStr()
+
+    // 跨零点后 todayRecord 已是昨天的数据，直接作废，按今天重新载入
+    if (todayRecord.value && todayRecord.value.date !== today) {
+      todayRecord.value = getTodayRecord()
+      form.loadFromRecord(todayRecord.value ?? {})
+      // 首页 picker 需始终有可用时间（见 refreshData 说明）
+      if (!clockInTime.value) clockInTime.value = DEFAULT_CLOCK_IN
+      if (!clockOutTime.value) clockOutTime.value = DEFAULT_CLOCK_OUT
+    }
+
+    const existing = todayRecord.value
+    const record: ClockRecord = {
+      id: existing?.id ?? generateId(),
+      date: today,
+      clockIn: fields.clockIn !== undefined ? fields.clockIn : existing?.clockIn,
+      clockOut: fields.clockOut !== undefined ? fields.clockOut : existing?.clockOut,
+      isLeave: fields.isLeave !== undefined ? fields.isLeave : (existing?.isLeave ?? false),
+      leaveType: fields.leaveType !== undefined ? fields.leaveType : existing?.leaveType,
+    }
+    // 未请假时不残留 leaveType
+    if (!record.isLeave) record.leaveType = undefined
+
+    upsertRecordByDate(record)
+    todayRecord.value = record
+    loadMonthlyStats()
+    return record
   }
 
   function toggleLeave(e: Event) {
-    const today = getLocalDateStr()
     isLeaveToday.value = getUniEventValue<boolean>(e)
-
-    if (todayRecord.value) {
-      todayRecord.value.isLeave = isLeaveToday.value
-      todayRecord.value.leaveType = isLeaveToday.value ? leaveType.value : undefined
-      updateRecord(todayRecord.value)
-    } else {
-      const rec: ClockRecord = {
-        id: generateId(),
-        date: today,
-        isLeave: isLeaveToday.value,
-        leaveType: isLeaveToday.value ? leaveType.value : undefined,
-      }
-      addRecord(rec)
-      todayRecord.value = rec
-    }
-    loadMonthlyStats()
+    saveToday({
+      isLeave: isLeaveToday.value,
+      leaveType: isLeaveToday.value ? leaveType.value : undefined,
+    })
   }
 
   function handleLeaveTypeChange(e: Event) {
     onLeaveTypeChange(e)
-    if (todayRecord.value) {
-      todayRecord.value.leaveType = leaveType.value
-      updateRecord(todayRecord.value)
+    // 仅在当天确实处于请假状态时才有意义，否则会凭空造出一条请假记录
+    if (todayRecord.value?.isLeave) {
+      saveToday({ leaveType: leaveType.value })
     }
   }
 
   function recordClockIn() {
-    const today = getLocalDateStr()
-    if (todayRecord.value) {
-      todayRecord.value.clockIn = clockInTime.value
-      updateRecord(todayRecord.value)
-    } else {
-      const rec: ClockRecord = {
-        id: generateId(),
-        date: today,
-        clockIn: clockInTime.value,
-        isLeave: false,
-      }
-      addRecord(rec)
-      todayRecord.value = rec
-    }
-    loadMonthlyStats()
+    saveToday({ clockIn: clockInTime.value })
     uni.showToast({ title: '已记录', icon: 'success' })
   }
 
   function recordClockOut() {
-    const today = getLocalDateStr()
-    if (todayRecord.value) {
-      todayRecord.value.clockOut = clockOutTime.value
-      updateRecord(todayRecord.value)
-    } else {
-      const rec: ClockRecord = {
-        id: generateId(),
-        date: today,
-        clockOut: clockOutTime.value,
-        isLeave: false,
-      }
-      addRecord(rec)
-      todayRecord.value = rec
+    const saved = saveToday({ clockOut: clockOutTime.value })
+    // 只打了下班卡、或下班早于上班时给出提示，避免用户以为工时算对了
+    if (saved.clockIn && calcHours(saved.clockIn, saved.clockOut ?? '') === 0) {
+      uni.showToast({ title: '下班时间早于上班时间', icon: 'none' })
+      return
     }
-    loadMonthlyStats()
     uni.showToast({ title: '已记录', icon: 'success' })
   }
 
   function refreshData() {
     showLeave.value = getShowLeave()
     todayRecord.value = getTodayRecord()
-    if (todayRecord.value) {
-      isLeaveToday.value = todayRecord.value.isLeave || false
-      leaveType.value = (todayRecord.value.leaveType as 'full' | 'half') || 'full'
-      if (todayRecord.value.clockIn) clockInTime.value = todayRecord.value.clockIn
-      if (todayRecord.value.clockOut) clockOutTime.value = todayRecord.value.clockOut
-    } else {
-      isLeaveToday.value = false
-      leaveType.value = 'full'
-      clockInTime.value = '09:00'
-      clockOutTime.value = '18:00'
-    }
+    form.loadFromRecord(todayRecord.value ?? {})
+    // 首页是「快速打卡」页，与历史/日历的编辑表单语义不同：
+    // picker 必须始终显示一个可用时间，用户不打开 picker 直接点
+    // 「记录下班」也能存进去。因此未打卡的那一项回落到默认值。
+    // 编辑表单（ClockEditForm）不能这么做——那里的空值代表「原本没有数据」，
+    // 填默认值会导致只打了上班卡的记录被凭空补上 18:00、算出 9 小时工时。
+    if (!clockInTime.value) clockInTime.value = DEFAULT_CLOCK_IN
+    if (!clockOutTime.value) clockOutTime.value = DEFAULT_CLOCK_OUT
     loadMonthlyStats()
   }
 
@@ -351,7 +359,7 @@
   }
 
   .card-badge.leave-badge {
-    background: #f59e0b;
+    background: $orange;
   }
 
   .time-row {

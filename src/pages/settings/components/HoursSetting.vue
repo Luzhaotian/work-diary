@@ -79,41 +79,21 @@
 
 <style lang="scss">
   @use '@/styles/variables.scss' as *;
+  @use '@/styles/settings.scss' as st;
 
-  .group {
-    margin-bottom: 32rpx;
-  }
+  @include st.group-block;
+  @include st.group-desc;
+  @include st.option-card;
+  @include st.cell-base;
+  @include st.cell-nav;
 
-  .group-title {
-    font-size: 24rpx;
-    color: $gray-400;
-    padding: 0 8rpx 12rpx;
-    display: block;
-  }
-
-  .group-desc {
-    font-size: 22rpx;
-    color: $gray-400;
-    padding: 12rpx 8rpx 0;
-    display: block;
-    line-height: 1.5;
-  }
-
-  .card {
-    background: #fff;
-    border-radius: $radius;
-    overflow: hidden;
-  }
-
+  // HoursSetting 的选项行：与 CalendarSetting 的 .option 有差异（后者带 gap），
+  // 故保留在各自组件内，不并入 option-card mixin
   .option {
     padding: 28rpx 24rpx;
     display: flex;
     align-items: center;
     justify-content: space-between;
-  }
-
-  .option-border {
-    border-top: 1rpx solid $gray-100;
   }
 
   .option-label {
@@ -125,36 +105,5 @@
     font-size: 30rpx;
     color: $blue;
     font-weight: 600;
-  }
-
-  .cell {
-    background: #fff;
-    border-radius: $radius;
-    padding: 28rpx 24rpx;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .cell-label {
-    font-size: 30rpx;
-    color: $gray-900;
-  }
-
-  .cell-right {
-    display: flex;
-    align-items: center;
-    gap: 8rpx;
-  }
-
-  .cell-value {
-    font-size: 26rpx;
-    color: $gray-400;
-  }
-
-  .cell-arrow {
-    font-size: 32rpx;
-    color: $gray-200;
-    font-weight: 300;
   }
 </style>

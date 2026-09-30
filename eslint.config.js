@@ -14,6 +14,13 @@ const commonGlobals = {
   clearInterval: "readonly",
   setTimeout: "readonly",
   clearTimeout: "readonly",
+  // H5 端（record.vue 导出 CSV 的 #ifndef MP-WEIXIN 分支）会用到浏览器全局
+  document: "readonly",
+  window: "readonly",
+  navigator: "readonly",
+  Blob: "readonly",
+  URL: "readonly",
+  globalThis: "readonly",
 }
 
 export default [
@@ -36,6 +43,9 @@ export default [
     },
     rules: {
       "prettier/prettier": "error",
+      // 基础规则不认识 TS 类型位置的参数（如接口里的 (e: Event) => void），
+      // 交给 @typescript-eslint 版本处理，避免重复报错
+      "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
       "vue/multi-word-component-names": "off",
@@ -72,6 +82,7 @@ export default [
     },
     rules: {
       "prettier/prettier": "error",
+      "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
     },
