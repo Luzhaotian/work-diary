@@ -40,6 +40,25 @@
       </view>
     </view>
 
+    <view class="group">
+      <text class="group-title"> 关于 </text>
+      <view class="cell" @tap="goDetail('privacy')">
+        <text class="cell-label"> 隐私协议 </text>
+        <view class="cell-right">
+          <text class="cell-value"> 不收集 · 纯本地 </text>
+          <text class="cell-arrow"> › </text>
+        </view>
+      </view>
+      <view class="cell" @tap="copyEmail">
+        <text class="cell-label"> 联系我 </text>
+        <view class="cell-right">
+          <text class="cell-value">
+            {{ contactEmail }}
+          </text>
+        </view>
+      </view>
+    </view>
+
     <GuideOverlay
       :visible="showGuide"
       title="打开日历设置"
@@ -73,10 +92,20 @@
   const calendarText = ref('双休 · 法定节假日')
   const autoClockText = ref('已关闭')
   const showGuide = ref(false)
+  const contactEmail = 'lu199705@163.com'
   const showLeaveText = computed(() => (showLeave.value ? '已开启' : '已关闭'))
 
   function goDetail(type: string) {
     uni.navigateTo({ url: `/pages/settings/detail?type=${type}` })
+  }
+
+  function copyEmail() {
+    uni.setClipboardData({
+      data: contactEmail,
+      success() {
+        uni.showToast({ title: '邮箱已复制', icon: 'success' })
+      },
+    })
   }
 
   function dismissGuide() {

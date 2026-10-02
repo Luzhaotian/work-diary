@@ -2,8 +2,8 @@
   "name": "上班记",
   "appid": "wx66ff7b8f552cf5ad",
   "description": "打卡记录与工时统计小程序",
-  "versionName": "1.3.0",
-  "versionCode": "130",
+  "versionName": "1.4.0",
+  "versionCode": "140",
   "transformPx": false,
   "app-plus": {
     "usingComponents": true,

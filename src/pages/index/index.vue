@@ -136,12 +136,15 @@
       @secondary="dismissGuide"
       @dismiss="dismissGuide"
     />
+
+    <ApologyDialog :visible="showApology" @confirm="dismissApology" />
   </view>
 </template>
 
 <script setup lang="ts">
   import ClockDisplay from '@/components/ClockDisplay.vue'
   import GuideOverlay from '@/components/GuideOverlay.vue'
+  import ApologyDialog from '@/components/ApologyDialog.vue'
   import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import type { ClockRecord, MonthlyStats } from '@/types/clock'
@@ -153,6 +156,8 @@
     getGuideCompleted,
     setGuideCompleted,
     setGuideShowSettingsTip,
+    getApologyAdsDismissed,
+    setApologyAdsDismissed,
   } from '@/utils/storage'
   import { calcHours, LEAVE_TYPES } from '@/utils/time'
   import { getLocalDateStr } from '@/utils/date'
@@ -176,6 +181,7 @@
   const todayRecord = ref<ClockRecord | undefined>()
   const showLeave = ref(true)
   const showGuide = ref(false)
+  const showApology = ref(false)
   const monthlyStats = ref<MonthlyStats>({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
@@ -198,10 +204,18 @@
     return calcHours(todayRecord.value.clockIn, todayRecord.value.clockOut).toFixed(1) + 'h'
   })
 
+  function refreshOverlays() {
+    const guideDone = getGuideCompleted()
+    showGuide.value = !guideDone
+    // 引导未完成时不抢致歉弹窗；关掉引导后下次 onShow 再出
+    showApology.value = guideDone && !getApologyAdsDismissed()
+  }
+
   function dismissGuide() {
     showGuide.value = false
     setGuideCompleted(true)
     setGuideShowSettingsTip(false)
+    showApology.value = !getApologyAdsDismissed()
   }
 
   function goSettingsFromGuide() {
@@ -209,6 +223,11 @@
     setGuideCompleted(true)
     setGuideShowSettingsTip(true)
     uni.switchTab({ url: '/pages/settings/settings' })
+  }
+
+  function dismissApology() {
+    showApology.value = false
+    setApologyAdsDismissed(true)
   }
 
   /**
@@ -306,7 +325,7 @@
 
   onShow(() => {
     refreshData()
-    showGuide.value = !getGuideCompleted()
+    refreshOverlays()
     // 自动打卡（进入补卡/到点打卡）的提示只展示一次
     const msg = lastAutoClockMessage.value
     if (msg) {

@@ -461,6 +461,17 @@ export function setGuideShowSettingsTip(show: boolean): void {
   else uni.removeStorageSync(GUIDE_SHOW_SETTINGS_TIP_KEY)
 }
 
+/** 广告致歉声明是否已读（点过「我知道了」） */
+const APOLOGY_ADS_DISMISSED_KEY = 'apology_ads_dismissed'
+
+export function getApologyAdsDismissed(): boolean {
+  return !!uni.getStorageSync(APOLOGY_ADS_DISMISSED_KEY)
+}
+
+export function setApologyAdsDismissed(done: boolean): void {
+  uni.setStorageSync(APOLOGY_ADS_DISMISSED_KEY, done)
+}
+
 export function getCalendarSettingText(): string {
   const mode = getWeekendMode()
   const modeOpt = WEEKEND_MODE_OPTIONS.find((item) => item.value === mode)

@@ -4,6 +4,7 @@
     <CalendarSetting v-else-if="currentType === 'calendar'" />
     <HoursSetting v-else-if="currentType === 'hours'" />
     <AutoClockSetting v-else-if="currentType === 'autoclock'" />
+    <PrivacyPolicy v-else-if="currentType === 'privacy'" />
   </view>
 </template>
 
@@ -14,6 +15,7 @@
   import CalendarSetting from './components/CalendarSetting.vue'
   import HoursSetting from './components/HoursSetting.vue'
   import AutoClockSetting from './components/AutoClockSetting.vue'
+  import PrivacyPolicy from './components/PrivacyPolicy.vue'
 
   const currentType = ref('')
 
@@ -22,6 +24,7 @@
     calendar: '日历设置',
     hours: '午休扣除',
     autoclock: '自动打卡',
+    privacy: '隐私协议',
   }
 
   onLoad((query?: Record<string, string>) => {
