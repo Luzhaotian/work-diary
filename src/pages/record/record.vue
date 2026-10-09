@@ -144,27 +144,31 @@
     )
   }
 
+  /** 切月后刷新列表；无数据时 toast，但仍进入该月（空态可浏览）。进入页面 onShow 不走这里。 */
+  function applyMonth(year: number, month: number) {
+    currentYear.value = year
+    currentMonth.value = month
+    loadRecords()
+    if (records.value.length === 0) {
+      uni.showToast({ title: '该月暂无记录', icon: 'none' })
+    }
+  }
+
   function handlePrevMonth() {
     const m = prevMonth(currentYear.value, currentMonth.value)
-    currentYear.value = m.year
-    currentMonth.value = m.month
-    loadRecords()
+    applyMonth(m.year, m.month)
   }
 
   function handleNextMonth() {
     const m = nextMonth(currentYear.value, currentMonth.value)
-    currentYear.value = m.year
-    currentMonth.value = m.month
-    loadRecords()
+    applyMonth(m.year, m.month)
   }
 
   function onMonthPickerChange(e: Event) {
     const value = getUniEventValue<string>(e)
     const [y, m] = value.split('-').map(Number)
     if (!y || !m) return
-    currentYear.value = y
-    currentMonth.value = m
-    loadRecords()
+    applyMonth(y, m)
   }
 
   function editRecord(r: ClockRecord) {
