@@ -4,7 +4,12 @@
       <view class="month-btn" @tap="handlePrevMonth">
         <text class="month-arrow"> ‹ </text>
       </view>
-      <text class="month-title"> {{ currentYear }}年{{ currentMonth }}月 </text>
+      <picker mode="date" fields="month" :value="monthPickerValue" @change="onMonthPickerChange">
+        <view class="month-title-wrap">
+          <text class="month-title"> {{ currentYear }}年{{ currentMonth }}月 </text>
+          <text class="month-picker-hint"> ▾ </text>
+        </view>
+      </picker>
       <view class="month-btn" @tap="handleNextMonth">
         <text class="month-arrow"> › </text>
       </view>
@@ -93,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { ref, computed } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import ClockEditForm from '@/components/ClockEditForm.vue'
   import type { ClockRecord } from '@/types/clock'
@@ -107,6 +112,7 @@
   import { formatDay, formatWeekday, prevMonth, nextMonth } from '@/utils/date'
   import { useClockForm } from '@/composables/useClockForm'
   import { CONFIRM_COLOR } from '@/utils/theme'
+  import { getUniEventValue } from '@/types/event'
 
   const currentYear = ref(new Date().getFullYear())
   const currentMonth = ref(new Date().getMonth() + 1)
@@ -116,6 +122,12 @@
   const editingRecord = ref<ClockRecord | null>(null)
 
   const form = useClockForm()
+
+  /** picker fields="month" 需要 YYYY-MM-DD，日固定为 01 */
+  const monthPickerValue = computed(() => {
+    const m = String(currentMonth.value).padStart(2, '0')
+    return `${currentYear.value}-${m}-01`
+  })
 
   /**
    * 列表工时展示。走 formatEffectiveHours（与导出、统计同一口径），
@@ -143,6 +155,15 @@
     const m = nextMonth(currentYear.value, currentMonth.value)
     currentYear.value = m.year
     currentMonth.value = m.month
+    loadRecords()
+  }
+
+  function onMonthPickerChange(e: Event) {
+    const value = getUniEventValue<string>(e)
+    const [y, m] = value.split('-').map(Number)
+    if (!y || !m) return
+    currentYear.value = y
+    currentMonth.value = m
     loadRecords()
   }
 
@@ -391,10 +412,22 @@
     font-weight: 600;
   }
 
+  .month-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4rpx;
+  }
+
   .month-title {
     font-size: 32rpx;
     font-weight: 700;
     color: $gray-900;
+  }
+
+  .month-picker-hint {
+    font-size: 20rpx;
+    color: $gray-400;
+    line-height: 1;
   }
 
   .export-btn {

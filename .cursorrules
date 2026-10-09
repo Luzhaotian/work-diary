@@ -1,0 +1,11 @@
+# Git Commit Message
+
+When generating a Git commit message for this repository:
+
+- Write the subject and body in Simplified Chinese (简体中文)
+- Use Conventional Commits: `type(scope): 中文说明`
+- `type` / `scope` may stay in English (e.g. `feat`, `fix`, `record`)
+- Prefer one short subject line; only add a brief body when needed
+- Focus on why, not a line-by-line restatement of the diff
+
+Example: `feat(record): 历史记录页支持点击月份选择年月`
