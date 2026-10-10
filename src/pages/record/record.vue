@@ -113,6 +113,7 @@
   import { useClockForm } from '@/composables/useClockForm'
   import { CONFIRM_COLOR } from '@/utils/theme'
   import { getUniEventValue } from '@/types/event'
+  import { consumeTabMonth } from '@/utils/tabMonth'
 
   const currentYear = ref(new Date().getFullYear())
   const currentMonth = ref(new Date().getMonth() + 1)
@@ -220,6 +221,11 @@
   }
 
   onShow(() => {
+    const pending = consumeTabMonth('record')
+    if (pending) {
+      currentYear.value = pending.year
+      currentMonth.value = pending.month
+    }
     loadRecords()
   })
 

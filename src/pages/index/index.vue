@@ -98,13 +98,13 @@
         <text class="card-sub"> {{ monthlyStats.year }}年{{ monthlyStats.month }}月 </text>
       </view>
       <view class="stats-grid">
-        <view class="stat-item">
+        <view class="stat-item" @tap="goExpectedCalendar">
           <text class="stat-num">
             {{ monthlyStats.totalWorkDays }}
           </text>
           <text class="stat-desc"> 应出勤 </text>
         </view>
-        <view class="stat-item">
+        <view class="stat-item" @tap="goActualRecords">
           <text class="stat-num">
             {{ monthlyStats.actualWorkDays }}
           </text>
@@ -166,6 +166,7 @@
   import { useClockForm, DEFAULT_CLOCK_IN, DEFAULT_CLOCK_OUT } from '@/composables/useClockForm'
   import { lastAutoClockMessage } from '@/composables/useAutoClock'
   import { PRIMARY_COLOR } from '@/utils/theme'
+  import { requestTabMonth } from '@/utils/tabMonth'
 
   const form = useClockForm()
   const {
@@ -238,6 +239,16 @@
   function loadMonthlyStats() {
     const now = new Date()
     monthlyStats.value = calcMonthlyStats(now.getFullYear(), now.getMonth() + 1)
+  }
+
+  function goExpectedCalendar() {
+    requestTabMonth('calendar', monthlyStats.value.year, monthlyStats.value.month)
+    uni.switchTab({ url: '/pages/calendar/calendar' })
+  }
+
+  function goActualRecords() {
+    requestTabMonth('record', monthlyStats.value.year, monthlyStats.value.month)
+    uni.switchTab({ url: '/pages/record/record' })
   }
 
   /**

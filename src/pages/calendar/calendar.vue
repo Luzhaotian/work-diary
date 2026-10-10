@@ -137,6 +137,7 @@
   } from '@/utils/date'
   import { useClockForm } from '@/composables/useClockForm'
   import { CONFIRM_COLOR } from '@/utils/theme'
+  import { consumeTabMonth } from '@/utils/tabMonth'
 
   const form = useClockForm()
   const { loadFromRecord } = form
@@ -328,6 +329,12 @@
   }
 
   onShow(() => {
+    const pending = consumeTabMonth('calendar')
+    if (pending) {
+      year.value = pending.year
+      month.value = pending.month
+      selectedDay.value = null
+    }
     loadRecords()
     selectToday()
   })
