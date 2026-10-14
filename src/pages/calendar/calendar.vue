@@ -442,8 +442,9 @@
     border-color: $blue;
   }
 
+  /* 与下方图例色点一一对应；周末用略深灰，避免白底上看不出 */
   .day-cell.weekend {
-    background: $gray-50;
+    background: $gray-100;
   }
 
   .day-cell.holiday {
@@ -549,7 +550,7 @@
     border: 1rpx solid $green-dark;
   }
   .weekend-dot {
-    background: $gray-50;
+    background: $gray-100;
     border: 1rpx solid $gray-200;
   }
 

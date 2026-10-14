@@ -74,10 +74,18 @@ export function isWorkdayFromLib(dateStr: string): boolean {
   return !isWeekendRest(dateStr)
 }
 
-/** 是否为法定节假日（关闭设置时恒为 false） */
+/**
+ * 是否为法定节假日（关闭设置时恒为 false）。
+ *
+ * chinese-workday 的 isHoliday 会把普通周末也标成 true（festival 为「周末」），
+ * 日历着色若直接沿用，周末会盖成「节假日」橙底，图例里的「周末」永远对不上格子。
+ * 这里排除 festival 为「周末 / 工作日」的兜底值，只保留真正的法定放假日。
+ */
 export function isHolidayFromLib(dateStr: string): boolean {
   if (!getUseHolidays()) return false
-  return libIsHoliday(dateStr)
+  if (!libIsHoliday(dateStr)) return false
+  const name = getFestival(dateStr)
+  return !!(name && name !== '周末' && name !== '工作日')
 }
 
 /** 周末休息日且当天不上班（排除调休上班） */
